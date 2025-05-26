@@ -453,3 +453,282 @@ def check_and_update_task_completion(task_id: str) -> bool:
     except Exception as e:
         logger.error(f"检查任务完成状态时出错: {task_id}, 错误: {str(e)}")
         return False
+
+def force_complete_task(task_id: str) -> Tuple[bool, str]:
+    """
+    强制完成任务：设置主任务为完成，未完成的子任务状态更新为failure，移除redis中相关的任务
+
+    Args:
+        task_id: 任务ID
+
+    Returns:
+        (成功标志, 消息)
+    """
+    try:
+        # 获取任务
+        task = task_crud.get(id=task_id)
+        if not task:
+            logger.warning(f"任务不存在: {task_id}")
+            return False, "任务不存在"
+
+        # 检查任务状态
+        if task.status in [TaskStatus.COMPLETED.value, TaskStatus.FAILED.value, TaskStatus.CANCELLED.value]:
+            logger.warning(f"任务 {task_id} 已经是终止状态: {task.status}，无法强制完成")
+            return False, f"任务已经是终止状态: {task.status}，无法强制完成"
+
+        # 获取所有未完成的子任务
+        pending_subtasks = list(Subtask.select().where(
+            (Subtask.task == task_id) &
+            (Subtask.status.not_in([SubtaskStatus.COMPLETED.value, SubtaskStatus.FAILED.value, SubtaskStatus.CANCELLED.value]))
+        ))
+
+        # 更新所有未完成的子任务状态为失败
+        failed_count = 0
+        from backend.db.database import test_db_proxy
+        with test_db_proxy.atomic():
+            for subtask in pending_subtasks:
+                subtask.status = SubtaskStatus.FAILED.value
+                subtask.error = "任务被强制完成"
+                subtask.updated_at = datetime.now()
+                subtask.save()
+                failed_count += 1
+
+        # 清理Redis中的相关任务
+        try:
+            from backend.services.custom_background import get_background_service
+            background_service = get_background_service()
+            broker = background_service.broker
+            redis_client = broker.client
+
+            # 需要检查的队列列表
+            queues_to_check = [
+                (settings.SUBTASK_QUEUE, "test_run_subtask"),
+                (settings.SUBTASK_OPS_QUEUE, "test_run_lumina_subtask"),
+                ("test_master", "test_submit_master")
+            ]
+
+            redis_cleaned_count = 0
+            for queue_name, actor_name in queues_to_check:
+                try:
+                    # 检查普通队列和延迟队列
+                    queue_names_to_clean = [
+                        f"dramatiq:{queue_name}",  # 普通队列
+                        f"dramatiq:{queue_name}.DQ"  # 延迟队列
+                    ]
+
+                    for redis_queue_name in queue_names_to_clean:
+                        try:
+                            # 获取队列中的所有消息
+                            messages = redis_client.lrange(redis_queue_name, 0, -1)
+
+                            for message in messages:
+                                try:
+                                    # 解码消息内容
+                                    message_str = message.decode('utf-8') if isinstance(message, bytes) else str(message)
+
+                                    # 检查消息是否包含该任务的ID或子任务ID
+                                    task_related = False
+                                    if str(task_id) in message_str:
+                                        task_related = True
+                                    else:
+                                        for subtask in pending_subtasks:
+                                            if str(subtask.id) in message_str:
+                                                task_related = True
+                                                break
+
+                                    if task_related:
+                                        # 从队列中移除该消息
+                                        removed = redis_client.lrem(redis_queue_name, 1, message)
+                                        if removed > 0:
+                                            redis_cleaned_count += removed
+
+                                except Exception as msg_error:
+                                    logger.warning(f"处理Redis消息时出错: {str(msg_error)}")
+
+                        except Exception as queue_error:
+                            logger.warning(f"清理Redis队列 {redis_queue_name} 时出错: {str(queue_error)}")
+
+                except Exception as redis_error:
+                    logger.warning(f"清理队列 {queue_name} 时出错: {str(redis_error)}")
+
+        except Exception as redis_cleanup_error:
+            logger.warning(f"清理Redis时出错: {str(redis_cleanup_error)}")
+            redis_cleaned_count = 0
+
+        # 更新任务状态为已完成
+        update_data = {
+            'status': TaskStatus.COMPLETED.value,
+            'completed_at': datetime.now()
+        }
+        updated_task = task_crud.update(db_obj=task, obj_in=update_data)
+
+        if not updated_task:
+            logger.error(f"更新任务 {task_id} 状态为已完成失败")
+            return False, "更新任务状态失败"
+
+        # 发送飞书通知
+        try:
+            frontend_url = f"{settings.FRONTEND_BASE_URL}/model-testing/history/{task_id}"
+            feishu_task_notify(
+                event_type='task_force_completed',
+                task_id=str(task_id),
+                task_name=task.name,
+                submitter=task.user.username if task.user else "未知用户",
+                details={
+                    "强制失败的子任务数": failed_count,
+                    "Redis清理数": redis_cleaned_count
+                },
+                message="任务已被强制完成",
+                frontend_url=frontend_url
+            )
+        except Exception as notify_error:
+            logger.warning(f"发送飞书通知失败: {str(notify_error)}")
+
+        logger.info(f"任务 {task_id} 已强制完成，标记了 {failed_count} 个子任务为失败，清理了 {redis_cleaned_count} 个Redis消息")
+        return True, f"任务已强制完成，标记了 {failed_count} 个子任务为失败，清理了 {redis_cleaned_count} 个Redis消息"
+
+    except Exception as e:
+        import traceback
+        error_stack = traceback.format_exc()
+        logger.error(f"强制完成任务 {task_id} 失败: {str(e)}\n错误栈: {error_stack}")
+        return False, f"强制完成任务失败: {str(e)}"
+
+
+def force_cancel_task(task_id: str) -> Tuple[bool, str]:
+    """
+    强制取消任务：设置主任务为取消，未完成的子任务状态更新为取消，移除redis中相关的任务
+
+    Args:
+        task_id: 任务ID
+
+    Returns:
+        (成功标志, 消息)
+    """
+    try:
+        # 获取任务
+        task = task_crud.get(id=task_id)
+        if not task:
+            logger.warning(f"任务不存在: {task_id}")
+            return False, "任务不存在"
+
+        # 检查任务状态
+        if task.status in [TaskStatus.COMPLETED.value, TaskStatus.FAILED.value, TaskStatus.CANCELLED.value]:
+            logger.warning(f"任务 {task_id} 已经是终止状态: {task.status}，无法强制取消")
+            return False, f"任务已经是终止状态: {task.status}，无法强制取消"
+
+        # 获取所有未完成的子任务
+        pending_subtasks = list(Subtask.select().where(
+            (Subtask.task == task_id) &
+            (Subtask.status.not_in([SubtaskStatus.COMPLETED.value, SubtaskStatus.FAILED.value, SubtaskStatus.CANCELLED.value]))
+        ))
+
+        # 更新所有未完成的子任务状态为取消
+        cancelled_count = 0
+        from backend.db.database import test_db_proxy
+        with test_db_proxy.atomic():
+            for subtask in pending_subtasks:
+                subtask.status = SubtaskStatus.CANCELLED.value
+                subtask.error = "任务被强制取消"
+                subtask.updated_at = datetime.now()
+                subtask.save()
+                cancelled_count += 1
+
+        # 清理Redis中的相关任务
+        try:
+            from backend.services.custom_background import get_background_service
+            background_service = get_background_service()
+            broker = background_service.broker
+            redis_client = broker.client
+
+            # 需要检查的队列列表
+            queues_to_check = [
+                (settings.SUBTASK_QUEUE, "test_run_subtask"),
+                (settings.SUBTASK_OPS_QUEUE, "test_run_lumina_subtask"),
+                ("test_master", "test_submit_master")
+            ]
+
+            redis_cleaned_count = 0
+            for queue_name, actor_name in queues_to_check:
+                try:
+                    # 检查普通队列和延迟队列
+                    queue_names_to_clean = [
+                        f"dramatiq:{queue_name}",  # 普通队列
+                        f"dramatiq:{queue_name}.DQ"  # 延迟队列
+                    ]
+
+                    for redis_queue_name in queue_names_to_clean:
+                        try:
+                            # 获取队列中的所有消息
+                            messages = redis_client.lrange(redis_queue_name, 0, -1)
+
+                            for message in messages:
+                                try:
+                                    # 解码消息内容
+                                    message_str = message.decode('utf-8') if isinstance(message, bytes) else str(message)
+
+                                    # 检查消息是否包含该任务的ID或子任务ID
+                                    task_related = False
+                                    if str(task_id) in message_str:
+                                        task_related = True
+                                    else:
+                                        for subtask in pending_subtasks:
+                                            if str(subtask.id) in message_str:
+                                                task_related = True
+                                                break
+
+                                    if task_related:
+                                        # 从队列中移除该消息
+                                        removed = redis_client.lrem(redis_queue_name, 1, message)
+                                        if removed > 0:
+                                            redis_cleaned_count += removed
+
+                                except Exception as msg_error:
+                                    logger.warning(f"处理Redis消息时出错: {str(msg_error)}")
+
+                        except Exception as queue_error:
+                            logger.warning(f"清理Redis队列 {redis_queue_name} 时出错: {str(queue_error)}")
+
+                except Exception as redis_error:
+                    logger.warning(f"清理队列 {queue_name} 时出错: {str(redis_error)}")
+
+        except Exception as redis_cleanup_error:
+            logger.warning(f"清理Redis时出错: {str(redis_cleanup_error)}")
+            redis_cleaned_count = 0
+
+        # 更新任务状态为已取消
+        update_data = {
+            'status': TaskStatus.CANCELLED.value,
+            'completed_at': datetime.now()
+        }
+        updated_task = task_crud.update(db_obj=task, obj_in=update_data)
+
+        if not updated_task:
+            logger.error(f"更新任务 {task_id} 状态为已取消失败")
+            return False, "更新任务状态失败"
+
+        # 发送飞书通知
+        try:
+            frontend_url = f"{settings.FRONTEND_BASE_URL}/model-testing/history/{task_id}"
+            feishu_task_notify(
+                event_type='task_force_cancelled',
+                task_id=str(task_id),
+                task_name=task.name,
+                submitter=task.user.username if task.user else "未知用户",
+                details={
+                    "强制取消的子任务数": cancelled_count,
+                    "Redis清理数": redis_cleaned_count
+                },
+                message="任务已被强制取消",
+                frontend_url=frontend_url
+            )
+        except Exception as notify_error:
+            logger.warning(f"发送飞书通知失败: {str(notify_error)}")
+
+        logger.info(f"任务 {task_id} 已强制取消，取消了 {cancelled_count} 个子任务，清理了 {redis_cleaned_count} 个Redis消息")
+        return True, f"任务已强制取消，取消了 {cancelled_count} 个子任务，清理了 {redis_cleaned_count} 个Redis消息"
+
+    except Exception as e:
+        import traceback
+        error_stack = traceback.format_exc()
+        logger.error(f"强制取消任务 {task_id} 失败: {str(e)}\n错误栈: {error_stack}")
+        return False, f"强制取消任务失败: {str(e)}"

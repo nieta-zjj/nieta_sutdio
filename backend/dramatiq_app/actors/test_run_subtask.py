@@ -367,13 +367,21 @@ class ImageClient:
                     # 如果不是最后一次尝试，则等待下一次轮询
                     if attempt < max_attempts:
                         await asyncio.sleep(polling_interval)
-            except Exception as e:
-                # 如果是最后一次尝试，则直接抛出异常
-                if attempt == max_attempts:
-                    if isinstance(e, (MaxRetriesException, ContentCensoredException, RetryableException)):
-                        raise e
+
+            except (ContentCensoredException, RetryableException, Exception) as e:
+                # 对于FAILURE、ILLEGAL_IMAGE等状态异常，直接重新抛出，不继续轮询
+                if isinstance(e, (ContentCensoredException, RetryableException)) or "任务失败" in str(e):
+                    logger.error(f"检测到任务失败状态，停止轮询: {task_uuid}")
+                    raise e
+
+                # 对于网络错误等临时性错误，只有在最后一次尝试时才抛出异常
+                if attempt >= max_attempts:
                     logger.error(f"轮询任务状态失败，已达到最大轮询次数: {max_attempts}")
                     raise MaxRetriesException(f"达到最大轮询次数 {max_attempts}") from e
+                else:
+                    # 网络错误等临时性问题，记录警告并继续轮询
+                    logger.warning(f"轮询请求异常: {str(e)}, 尝试次数: {attempt}/{max_attempts}, 将继续重试")
+                    await asyncio.sleep(polling_interval)
 
         # 如果循环正常结束但仍未返回结果（这种情况理论上不会发生）
         raise MaxRetriesException(f"达到最大轮询次数 {max_attempts}")

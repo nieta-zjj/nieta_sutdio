@@ -1438,3 +1438,129 @@ async def get_task_reuse_config(
                 "error_stack": error_stack
             }
         )
+
+
+@router.post("/task/{task_id}/force-complete", response_model=APIResponse[Dict[str, Any]])
+async def force_complete_task(
+    task_id: str = Path(..., description="任务ID")
+):
+    """
+    强制完成任务：设置主任务为完成，未完成的子任务状态更新为failure，移除redis中相关的任务
+
+    Args:
+        task_id: 任务ID
+
+    Returns:
+        强制完成结果
+    """
+    try:
+        # 确保数据库连接是活跃的
+        from backend.db.database import test_db_proxy
+        if test_db_proxy.is_closed():
+            logger.info("数据库连接已关闭，尝试重新连接")
+            test_db_proxy.connect()
+
+        # 导入强制完成任务服务函数
+        from backend.services.task_service import force_complete_task as service_force_complete_task
+
+        # 调用服务层函数强制完成任务
+        success, message = service_force_complete_task(task_id)
+
+        if not success:
+            raise HTTPException(
+                status_code=400,
+                detail={"message": message}
+            )
+
+        return APIResponse[Dict[str, Any]](
+            code=200,
+            message="任务强制完成成功",
+            data={"task_id": task_id, "message": message}
+        )
+    except HTTPException:
+        # 直接重新抛出HTTP异常
+        raise
+    except Exception as e:
+        # 获取完整的错误栈信息
+        error_stack = traceback.format_exc()
+        logger.error(f"强制完成任务出错: {str(e)}\n错误栈: {error_stack}")
+
+        # 尝试重新初始化数据库连接
+        try:
+            from backend.db.initialization import reconnect_test_db
+            reconnect_test_db()
+            logger.info("已尝试重新初始化数据库连接")
+        except Exception as db_error:
+            logger.error(f"重新初始化数据库连接失败: {str(db_error)}")
+
+        # 在响应中包含错误栈信息
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": f"强制完成任务出错: {str(e)}",
+                "error_stack": error_stack
+            }
+        )
+
+
+@router.post("/task/{task_id}/force-cancel", response_model=APIResponse[Dict[str, Any]])
+async def force_cancel_task(
+    task_id: str = Path(..., description="任务ID")
+):
+    """
+    强制取消任务：设置主任务为取消，未完成的子任务状态更新为取消，移除redis中相关的任务
+
+    Args:
+        task_id: 任务ID
+
+    Returns:
+        强制取消结果
+    """
+    try:
+        # 确保数据库连接是活跃的
+        from backend.db.database import test_db_proxy
+        if test_db_proxy.is_closed():
+            logger.info("数据库连接已关闭，尝试重新连接")
+            test_db_proxy.connect()
+
+        # 导入强制取消任务服务函数
+        from backend.services.task_service import force_cancel_task as service_force_cancel_task
+
+        # 调用服务层函数强制取消任务
+        success, message = service_force_cancel_task(task_id)
+
+        if not success:
+            raise HTTPException(
+                status_code=400,
+                detail={"message": message}
+            )
+
+        return APIResponse[Dict[str, Any]](
+            code=200,
+            message="任务强制取消成功",
+            data={"task_id": task_id, "message": message}
+        )
+    except HTTPException:
+        # 直接重新抛出HTTP异常
+        raise
+    except Exception as e:
+        # 获取完整的错误栈信息
+        error_stack = traceback.format_exc()
+        logger.error(f"强制取消任务出错: {str(e)}\n错误栈: {error_stack}")
+
+        # 尝试重新初始化数据库连接
+        try:
+            from backend.db.initialization import reconnect_test_db
+            reconnect_test_db()
+            logger.info("已尝试重新初始化数据库连接")
+        except Exception as db_error:
+            logger.error(f"重新初始化数据库连接失败: {str(db_error)}")
+
+        # 在响应中包含错误栈信息
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": f"强制取消任务出错: {str(e)}",
+                "error_stack": error_stack
+            }
+        )

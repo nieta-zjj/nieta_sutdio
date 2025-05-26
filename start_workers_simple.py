@@ -34,6 +34,8 @@ def main():
             "--processes", "1",
             "--threads", "50"
         ]
+        # python -m backend.dramatiq_app.start_dramatiq master --processes 1 --threads 50 --watch
+        # python -m dramatiq backend.dramatiq_app.workers.master --processes 1 --threads 50 --watch
         master_process = subprocess.Popen(master_cmd, cwd=project_root)
         processes.append(("主任务Worker", master_process))
         time.sleep(3)  # 等待主任务worker启动

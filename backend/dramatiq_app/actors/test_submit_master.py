@@ -645,6 +645,7 @@ def monitor_subtasks_completion(task_id: str):
     """
     监控子任务完成情况，每10秒检查一次，直到所有子任务都完成或失败
     如果检测到任务被取消，会停止轮询并进行清理工作
+    如果连续10分钟没有进度更新，则算作剩余任务全部失败
 
     Args:
         task_id: 任务ID
@@ -670,6 +671,11 @@ def monitor_subtasks_completion(task_id: str):
             logger.warning(f"任务不存在: {task_id}")
             return
 
+        # 初始化超时监控变量
+        last_progress_time = datetime.now()
+        last_processed_count = 0
+        timeout_minutes = 10  # 10分钟超时
+
         # 监控循环
         while True:
             # 检查任务是否已被取消或处于其他终止状态
@@ -692,6 +698,42 @@ def monitor_subtasks_completion(task_id: str):
 
             # 更新任务进度并检查是否所有子任务都已完成
             all_subtasks_completed = update_task_progress(task_id)
+
+            # 检查进度是否有更新
+            current_processed_count = current_task.processed_images
+            if current_processed_count > last_processed_count:
+                # 有进度更新，重置超时计时器
+                last_progress_time = datetime.now()
+                last_processed_count = current_processed_count
+                logger.info(f"任务 {task_id} 进度更新: {current_processed_count} 个子任务已处理，重置超时计时器")
+
+            # 检查是否超时（连续10分钟没有进度更新）
+            time_since_last_progress = datetime.now() - last_progress_time
+            if time_since_last_progress.total_seconds() > (timeout_minutes * 60):
+                logger.warning(f"任务 {task_id} 连续 {timeout_minutes} 分钟没有进度更新，开始超时处理")
+
+                # 获取所有pending状态的子任务
+                pending_subtasks = list(Subtask.select().where(
+                    (Subtask.task == task_id) &
+                    (Subtask.status == SubtaskStatus.PENDING.value)
+                ))
+
+                if pending_subtasks:
+                    logger.info(f"将 {len(pending_subtasks)} 个pending子任务标记为失败")
+
+                    # 批量更新pending子任务为失败状态
+                    from backend.db.database import test_db_proxy
+                    with test_db_proxy.atomic():
+                        for subtask in pending_subtasks:
+                            subtask.status = SubtaskStatus.FAILED.value
+                            subtask.error = f"任务超时：连续{timeout_minutes}分钟没有进度更新"
+                            subtask.updated_at = datetime.now()
+                            subtask.save()
+
+                    logger.info(f"已将 {len(pending_subtasks)} 个pending子任务标记为失败")
+
+                # 重新检查任务完成状态
+                all_subtasks_completed = update_task_progress(task_id)
 
             if all_subtasks_completed:
                 logger.info(f"任务 {task_id} 的所有子任务都已处理完成，检查最终状态")
