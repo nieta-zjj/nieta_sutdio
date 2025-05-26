@@ -26,6 +26,6 @@ log.txt*
 # 特殊
 final_review_gate.py
 list_dir.py
-old*
+old/*
 background*
 *cursorrole*
