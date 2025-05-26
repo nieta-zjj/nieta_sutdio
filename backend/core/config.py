@@ -82,6 +82,12 @@ class Settings:
         if not self.FEISHU_DEBUG_WEBHOOK_URL:
             self.FEISHU_DEBUG_WEBHOOK_URL = self.FEISHU_WEBHOOK_URL
 
+        # 飞书通知控制配置
+        # 是否发送子任务成功通知（默认为False，不发送）
+        self.FEISHU_NOTIFY_SUBTASK_SUCCESS = os.getenv("FEISHU_NOTIFY_SUBTASK_SUCCESS", "false").lower() in ("true", "1", "yes")
+        # 是否发送子任务失败通知（默认为True，发送）
+        self.FEISHU_NOTIFY_SUBTASK_FAILURE = os.getenv("FEISHU_NOTIFY_SUBTASK_FAILURE", "true").lower() in ("true", "1", "yes")
+
         # 前端地址配置
         self.FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:3000")
 

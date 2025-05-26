@@ -37,24 +37,23 @@ class CustomBackgroundService:
             queue_name: 队列名称，默认为default
             delay: 延迟执行时间（毫秒），默认为None（立即执行）
         """
-        # 创建消息选项
-        options = {}
-        if delay is not None:
-            options["delay"] = delay
-            logger.debug(f"设置任务延迟执行: {delay}毫秒")
-
-        # 创建消息
+        # 创建消息（不在options中包含delay）
         msg = Message(
             queue_name=queue_name,
             actor_name=actor_name,
             args=(),
             kwargs=kwargs,
-            options=options,
+            options={},  # 延迟参数不放在options中
         )
 
-        # 发送消息到队列
-        logger.debug(f"发送任务到队列: {queue_name}, Actor: {actor_name}, 参数: {kwargs}, 延迟: {delay}毫秒")
-        self.broker.enqueue(msg)
+        # 发送消息到队列，将delay作为关键字参数传递给enqueue方法
+        if delay is not None:
+            logger.debug(f"发送延迟任务到队列: {queue_name}, Actor: {actor_name}, 参数: {kwargs}, 延迟: {delay}毫秒")
+            self.broker.enqueue(msg, delay=delay)
+        else:
+            logger.debug(f"发送立即任务到队列: {queue_name}, Actor: {actor_name}, 参数: {kwargs}")
+            self.broker.enqueue(msg)
+
         logger.debug(f"任务已发送到队列: {queue_name}")
 
 

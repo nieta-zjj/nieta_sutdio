@@ -375,9 +375,6 @@ class ImageClient:
                     logger.error(f"轮询任务状态失败，已达到最大轮询次数: {max_attempts}")
                     raise MaxRetriesException(f"达到最大轮询次数 {max_attempts}") from e
 
-                logger.warning(f"轮询任务状态失败: {str(e)}, 将在{polling_interval}秒后重试")
-                await asyncio.sleep(polling_interval)
-
         # 如果循环正常结束但仍未返回结果（这种情况理论上不会发生）
         raise MaxRetriesException(f"达到最大轮询次数 {max_attempts}")
 
@@ -579,20 +576,24 @@ async def process_subtask(subtask_id: str) -> Dict[str, Any]:
 
         # 尝试发送飞书通知
         try:
-            feishu_notify(
-                event_type="task_completed",
-                task_id=str(subtask.task.id),
-                task_name=subtask.task.name,
-                submitter=subtask.task.user.username if subtask.task.user else None,
-                details={
-                    "子任务ID": str(subtask_id),
-                    "图像URL": image_url,
-                    "随机种子": actual_seed,
-                    "变量索引": subtask.variable_indices,
-                    "是否Lumina": "是" if is_lumina else "否"
-                },
-                message="子任务已完成"
-            )
+            # 根据配置决定是否发送子任务成功通知
+            if settings.FEISHU_NOTIFY_SUBTASK_SUCCESS:
+                feishu_notify(
+                    event_type="task_completed",
+                    task_id=str(subtask.task.id),
+                    task_name=subtask.task.name,
+                    submitter=subtask.task.user.username if subtask.task.user else None,
+                    details={
+                        "子任务ID": str(subtask_id),
+                        "图像URL": image_url,
+                        "随机种子": actual_seed,
+                        "变量索引": subtask.variable_indices,
+                        "是否Lumina": "是" if is_lumina else "否"
+                    },
+                    message="子任务已完成"
+                )
+            else:
+                logger.debug(f"子任务成功通知已禁用，跳过发送飞书通知: {subtask_id}")
         except Exception as notify_error:
             # 飞书通知失败不影响主流程
             logger.warning(f"发送飞书通知失败: {str(notify_error)}")
@@ -625,20 +626,24 @@ async def process_subtask(subtask_id: str) -> Dict[str, Any]:
 
         # 尝试发送飞书通知
         try:
-            feishu_notify(
-                event_type="task_failed",
-                task_id=str(subtask.task.id),
-                task_name=subtask.task.name,
-                submitter=subtask.task.user.username if subtask.task.user else None,
-                details={
-                    "子任务ID": str(subtask_id),
-                    "错误信息": error_msg,
-                    "变量索引": subtask.variable_indices,
-                    "是否内容不合规": "是" if is_censored else "否",
-                    "错误类型": "内容不合规" if is_censored else "其他错误"
-                },
-                message="子任务失败"
-            )
+            # 根据配置决定是否发送子任务失败通知
+            if settings.FEISHU_NOTIFY_SUBTASK_FAILURE:
+                feishu_notify(
+                    event_type="task_failed",
+                    task_id=str(subtask.task.id),
+                    task_name=subtask.task.name,
+                    submitter=subtask.task.user.username if subtask.task.user else None,
+                    details={
+                        "子任务ID": str(subtask_id),
+                        "错误信息": error_msg,
+                        "变量索引": subtask.variable_indices,
+                        "是否内容不合规": "是" if is_censored else "否",
+                        "错误类型": "内容不合规" if is_censored else "其他错误"
+                    },
+                    message="子任务失败"
+                )
+            else:
+                logger.debug(f"子任务失败通知已禁用，跳过发送飞书通知: {subtask_id}")
         except Exception as notify_error:
             # 飞书通知失败不影响主流程
             logger.warning(f"发送飞书通知失败: {str(notify_error)}")
