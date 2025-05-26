@@ -19,7 +19,6 @@ import os
 import httpx
 
 from backend.core.config import settings
-from backend.utils.feishu import feishu_notify
 from backend.models.db.dramatiq_base import DramatiqBaseModel
 from backend.models.db.subtasks import Subtask, SubtaskStatus
 
@@ -582,30 +581,6 @@ async def process_subtask(subtask_id: str) -> Dict[str, Any]:
             result=image_url
         )
 
-        # 尝试发送飞书通知
-        try:
-            # 根据配置决定是否发送子任务成功通知
-            if settings.FEISHU_NOTIFY_SUBTASK_SUCCESS:
-                feishu_notify(
-                    event_type="task_completed",
-                    task_id=str(subtask.task.id),
-                    task_name=subtask.task.name,
-                    submitter=subtask.task.user.username if subtask.task.user else None,
-                    details={
-                        "子任务ID": str(subtask_id),
-                        "图像URL": image_url,
-                        "随机种子": actual_seed,
-                        "变量索引": subtask.variable_indices,
-                        "是否Lumina": "是" if is_lumina else "否"
-                    },
-                    message="子任务已完成"
-                )
-            else:
-                logger.debug(f"子任务成功通知已禁用，跳过发送飞书通知: {subtask_id}")
-        except Exception as notify_error:
-            # 飞书通知失败不影响主流程
-            logger.warning(f"发送飞书通知失败: {str(notify_error)}")
-
         # 返回结果
         return {
             "status": "completed",
@@ -631,30 +606,6 @@ async def process_subtask(subtask_id: str) -> Dict[str, Any]:
             status=SubtaskStatus.FAILED.value,
             error=error_msg
         )
-
-        # 尝试发送飞书通知
-        try:
-            # 根据配置决定是否发送子任务失败通知
-            if settings.FEISHU_NOTIFY_SUBTASK_FAILURE:
-                feishu_notify(
-                    event_type="task_failed",
-                    task_id=str(subtask.task.id),
-                    task_name=subtask.task.name,
-                    submitter=subtask.task.user.username if subtask.task.user else None,
-                    details={
-                        "子任务ID": str(subtask_id),
-                        "错误信息": error_msg,
-                        "变量索引": subtask.variable_indices,
-                        "是否内容不合规": "是" if is_censored else "否",
-                        "错误类型": "内容不合规" if is_censored else "其他错误"
-                    },
-                    message="子任务失败"
-                )
-            else:
-                logger.debug(f"子任务失败通知已禁用，跳过发送飞书通知: {subtask_id}")
-        except Exception as notify_error:
-            # 飞书通知失败不影响主流程
-            logger.warning(f"发送飞书通知失败: {str(notify_error)}")
 
         # 根据错误类型抛出不同的异常
         if is_censored:
