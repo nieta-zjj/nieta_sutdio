@@ -15,7 +15,6 @@ const nextConfig = {
                 // 匹配所有API路由
                 source: '/api/:path*',
                 headers: [
-                    { key: 'Access-Control-Allow-Origin', value: '*' },
                     { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH' },
                     { key: 'Access-Control-Allow-Headers', value: '*' },
                     { key: 'Access-Control-Allow-Credentials', value: 'true' },
@@ -26,7 +25,6 @@ const nextConfig = {
                 // 匹配所有路由
                 source: '/:path*',
                 headers: [
-                    { key: 'Access-Control-Allow-Origin', value: '*' },
                     { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH' },
                     { key: 'Access-Control-Allow-Headers', value: '*' },
                     { key: 'Access-Control-Allow-Credentials', value: 'true' },

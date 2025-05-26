@@ -66,7 +66,14 @@ app = FastAPI(
 # 添加CORS中间件
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://nietest.talesofai.cn",
+        "https://nietestbackend.talesofai.cn",
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001"
+    ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
     allow_headers=["*"],
@@ -77,10 +84,26 @@ app.add_middleware(
 @app.options("/{full_path:path}")
 async def options_handler(request: Request):
     """处理所有OPTIONS预检请求"""
+    # 获取请求的origin
+    origin = request.headers.get("origin")
+
+    # 允许的域名列表
+    allowed_origins = [
+        "https://nietest.talesofai.cn",
+        "https://nietestbackend.talesofai.cn",
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001"
+    ]
+
+    # 如果origin在允许列表中，则设置为该origin，否则设置为第一个允许的origin
+    allow_origin = origin if origin in allowed_origins else allowed_origins[0]
+
     return JSONResponse(
         content={},
         headers={
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin": allow_origin,
             "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH",
             "Access-Control-Allow-Headers": "*",
             "Access-Control-Allow-Credentials": "true",
