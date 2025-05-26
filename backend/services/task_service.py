@@ -508,6 +508,12 @@ def force_complete_task(task_id: str) -> Tuple[bool, str]:
             ]
 
             redis_cleaned_count = 0
+
+            # 构建需要移除的ID列表
+            ids_to_remove = {str(task_id)}  # 主任务ID
+            for subtask in pending_subtasks:
+                ids_to_remove.add(str(subtask.id))  # 子任务ID
+
             for queue_name, actor_name in queues_to_check:
                 try:
                     # 检查普通队列和延迟队列
@@ -526,13 +532,16 @@ def force_complete_task(task_id: str) -> Tuple[bool, str]:
                                     # 解码消息内容
                                     message_str = message.decode('utf-8') if isinstance(message, bytes) else str(message)
 
-                                    # 检查消息是否包含该任务的ID或子任务ID
+                                    # 检查消息是否包含指定任务的ID或子任务ID
                                     task_related = False
-                                    if str(task_id) in message_str:
+
+                                    # 对于主任务队列，检查task_id参数
+                                    if queue_name == "test_master" and f'"task_id": "{task_id}"' in message_str:
                                         task_related = True
-                                    else:
-                                        for subtask in pending_subtasks:
-                                            if str(subtask.id) in message_str:
+                                    # 对于子任务队列，检查subtask_id参数
+                                    elif queue_name in [settings.SUBTASK_QUEUE, settings.SUBTASK_OPS_QUEUE]:
+                                        for subtask_id in ids_to_remove:
+                                            if subtask_id != str(task_id) and f'"subtask_id": "{subtask_id}"' in message_str:
                                                 task_related = True
                                                 break
 
@@ -648,6 +657,12 @@ def force_cancel_task(task_id: str) -> Tuple[bool, str]:
             ]
 
             redis_cleaned_count = 0
+
+            # 构建需要移除的ID列表
+            ids_to_remove = {str(task_id)}  # 主任务ID
+            for subtask in pending_subtasks:
+                ids_to_remove.add(str(subtask.id))  # 子任务ID
+
             for queue_name, actor_name in queues_to_check:
                 try:
                     # 检查普通队列和延迟队列
@@ -666,13 +681,16 @@ def force_cancel_task(task_id: str) -> Tuple[bool, str]:
                                     # 解码消息内容
                                     message_str = message.decode('utf-8') if isinstance(message, bytes) else str(message)
 
-                                    # 检查消息是否包含该任务的ID或子任务ID
+                                    # 检查消息是否包含指定任务的ID或子任务ID
                                     task_related = False
-                                    if str(task_id) in message_str:
+
+                                    # 对于主任务队列，检查task_id参数
+                                    if queue_name == "test_master" and f'"task_id": "{task_id}"' in message_str:
                                         task_related = True
-                                    else:
-                                        for subtask in pending_subtasks:
-                                            if str(subtask.id) in message_str:
+                                    # 对于子任务队列，检查subtask_id参数
+                                    elif queue_name in [settings.SUBTASK_QUEUE, settings.SUBTASK_OPS_QUEUE]:
+                                        for subtask_id in ids_to_remove:
+                                            if subtask_id != str(task_id) and f'"subtask_id": "{subtask_id}"' in message_str:
                                                 task_related = True
                                                 break
 

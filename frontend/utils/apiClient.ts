@@ -377,3 +377,17 @@ export const removeSubtaskEvaluation = async (subtaskId: string, evaluationIndex
     method: "DELETE",
   });
 };
+
+// 强制完成任务
+export const forceCompleteTask = async (taskId: string) => {
+  return await apiRequest(`api/v1/test/task/${taskId}/force-complete`, {
+    method: "POST",
+  });
+};
+
+// 强制取消任务
+export const forceCancelTask = async (taskId: string) => {
+  return await apiRequest(`api/v1/test/task/${taskId}/force-cancel`, {
+    method: "POST",
+  });
+};

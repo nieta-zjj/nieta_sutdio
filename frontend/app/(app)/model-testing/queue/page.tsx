@@ -11,19 +11,32 @@ import {
   Button,
   Divider,
   Badge,
-  ScrollShadow
+  ScrollShadow,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  useDisclosure
 } from "@heroui/react";
 import { Icon } from "@iconify/react";
-import { getTasks } from "@/utils/apiClient";
+import { getTasks, forceCompleteTask, forceCancelTask } from "@/utils/apiClient";
 import { TaskListItem, APIResponse } from "@/types/task";
-import { TaskStatusChip } from "@/components/task/task-status-chip";
 import { CustomProgress } from "@/components/ui/custom-progress";
+import { toast } from "sonner";
 
 export default function QueuePage() {
   const [queueTasks, setQueueTasks] = useState<TaskListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [total, setTotal] = useState(0);
+  const [operatingTaskId, setOperatingTaskId] = useState<string | null>(null);
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [confirmAction, setConfirmAction] = useState<{
+    type: 'complete' | 'cancel';
+    taskId: string;
+    taskName: string;
+  } | null>(null);
 
   // 格式化时间
   const formatTime = (timeStr: string) => {
@@ -51,6 +64,39 @@ export default function QueuePage() {
       return `${minutes}m ${seconds}s`;
     } else {
       return `${seconds}s`;
+    }
+  };
+
+  // 强制操作确认
+  const handleForceAction = (type: 'complete' | 'cancel', taskId: string, taskName: string) => {
+    setConfirmAction({ type, taskId, taskName });
+    onOpen();
+  };
+
+  // 执行强制操作
+  const executeForceAction = async () => {
+    if (!confirmAction) return;
+
+    try {
+      setOperatingTaskId(confirmAction.taskId);
+
+      if (confirmAction.type === 'complete') {
+        await forceCompleteTask(confirmAction.taskId);
+        toast.success(`任务 "${confirmAction.taskName}" 已强制完成`);
+      } else {
+        await forceCancelTask(confirmAction.taskId);
+        toast.success(`任务 "${confirmAction.taskName}" 已强制取消`);
+      }
+
+      // 刷新任务列表
+      await loadQueueTasks(true);
+    } catch (error: any) {
+      console.error("强制操作失败:", error);
+      toast.error(`强制操作失败: ${error.message || "未知错误"}`);
+    } finally {
+      setOperatingTaskId(null);
+      onClose();
+      setConfirmAction(null);
     }
   };
 
@@ -199,7 +245,30 @@ export default function QueuePage() {
                                     </span>
                                   </div>
                                 </div>
-                                <TaskStatusChip status={task.status} size="sm" />
+
+                                {/* 强制操作按钮 */}
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="flat"
+                                    color="success"
+                                    isLoading={operatingTaskId === task.id}
+                                    onPress={() => handleForceAction('complete', task.id, task.name)}
+                                    startContent={<Icon icon="solar:check-circle-linear" className="w-4 h-4" />}
+                                  >
+                                    强制完成
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="flat"
+                                    color="danger"
+                                    isLoading={operatingTaskId === task.id}
+                                    onPress={() => handleForceAction('cancel', task.id, task.name)}
+                                    startContent={<Icon icon="solar:close-circle-linear" className="w-4 h-4" />}
+                                  >
+                                    强制取消
+                                  </Button>
+                                </div>
                               </div>
 
                               {/* 进度信息 */}
@@ -249,6 +318,7 @@ export default function QueuePage() {
                                   className="h-5 w-5 min-w-5 ml-2"
                                   onPress={() => {
                                     navigator.clipboard.writeText(task.id);
+                                    toast.success("任务ID已复制到剪贴板");
                                   }}
                                   title="复制任务ID"
                                 >
@@ -267,6 +337,52 @@ export default function QueuePage() {
           </CardBody>
         </Card>
       </div>
+
+      {/* 强制操作确认弹窗 */}
+      <Modal isOpen={isOpen} onClose={onClose} size="md">
+        <ModalContent>
+          <ModalHeader>
+            <div className="flex items-center gap-2">
+              <Icon
+                icon={confirmAction?.type === 'complete' ? "solar:check-circle-linear" : "solar:close-circle-linear"}
+                className={`w-5 h-5 ${confirmAction?.type === 'complete' ? 'text-success' : 'text-danger'}`}
+              />
+              {confirmAction?.type === 'complete' ? '强制完成任务' : '强制取消任务'}
+            </div>
+          </ModalHeader>
+          <ModalBody>
+            <div className="space-y-3">
+              <p className="text-default-600">
+                您确定要{confirmAction?.type === 'complete' ? '强制完成' : '强制取消'}以下任务吗？
+              </p>
+              <div className="bg-default-100 p-3 rounded-lg">
+                <p className="font-medium">{confirmAction?.taskName}</p>
+                <p className="text-sm text-default-500 font-mono">ID: {confirmAction?.taskId}</p>
+              </div>
+              <div className={`p-3 rounded-lg ${confirmAction?.type === 'complete' ? 'bg-warning-50' : 'bg-danger-50'}`}>
+                <p className={`text-sm ${confirmAction?.type === 'complete' ? 'text-warning-700' : 'text-danger-700'}`}>
+                  {confirmAction?.type === 'complete'
+                    ? '⚠️ 此操作将强制完成任务，未完成的子任务将被标记为失败，并清理Redis中的相关队列消息。'
+                    : '⚠️ 此操作将强制取消任务，未完成的子任务将被标记为取消，并清理Redis中的相关队列消息。'
+                  }
+                </p>
+              </div>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light" onPress={onClose}>
+              取消
+            </Button>
+            <Button
+              color={confirmAction?.type === 'complete' ? 'warning' : 'danger'}
+              onPress={executeForceAction}
+              isLoading={operatingTaskId === confirmAction?.taskId}
+            >
+              确认{confirmAction?.type === 'complete' ? '强制完成' : '强制取消'}
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }
