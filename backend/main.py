@@ -68,9 +68,25 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+# 添加全局OPTIONS处理器
+@app.options("/{full_path:path}")
+async def options_handler(request: Request):
+    """处理所有OPTIONS预检请求"""
+    return JSONResponse(
+        content={},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Max-Age": "86400",
+        }
+    )
 
 # 添加数据库中间件（必须在日志中间件之前添加，确保数据库连接在记录日志之前初始化）
 app.add_middleware(DatabaseMiddleware)
