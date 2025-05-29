@@ -751,7 +751,7 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
                         <input
                             type="number"
                             min="5"
-                            max="50"
+                            max="200"
                             value={headerCharLimit}
                             onChange={(e) => {
                                 const value = parseInt(e.target.value);
