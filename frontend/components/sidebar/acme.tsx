@@ -14,11 +14,7 @@ export const AcmeIcon: React.FC<IconSvgProps> = ({ size = 32, width, height, ...
     />
 
     {/* 液体 */}
-    <path
-      d="M10 14H22L19 20H13L10 14Z"
-      fill="currentColor"
-      fillOpacity="0.2"
-    />
+    <path d="M10 14H22L19 20H13L10 14Z" fill="currentColor" fillOpacity="0.2" />
 
     {/* 气泡 */}
     <circle cx="14" cy="17" r="1" fill="currentColor" />

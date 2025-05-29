@@ -25,6 +25,7 @@ export const getApiUrl = (path: string): string => {
   const baseUrl = getApiBaseUrl();
   // 确保路径以/开头
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
   return `${baseUrl}${normalizedPath}`;
 };
 
@@ -43,10 +44,9 @@ const handleResponse = async (response: Response) => {
     // 尝试解析错误响应
     try {
       const errorData = await response.json();
-      throw new Error(
-        errorData.message || errorData.detail || `请求失败: ${response.status}`
-      );
-    } catch (e) {
+
+      throw new Error(errorData.message || errorData.detail || `请求失败: ${response.status}`);
+    } catch {
       // 如果无法解析JSON，则使用状态文本
       throw new Error(`请求失败: ${response.status} ${response.statusText}`);
     }
@@ -57,16 +57,8 @@ const handleResponse = async (response: Response) => {
 };
 
 // 通用API请求方法
-export const apiRequest = async (
-  path: string,
-  options: RequestOptions = {}
-) => {
-  const {
-    method = "GET",
-    headers = {},
-    body,
-    isFormData = false,
-  } = options;
+export const apiRequest = async (path: string, options: RequestOptions = {}) => {
+  const { method = "GET", headers = {}, body, isFormData = false } = options;
 
   // 获取访问令牌
   const token = typeof localStorage !== "undefined" ? localStorage.getItem("access_token") : null;
@@ -82,10 +74,13 @@ export const apiRequest = async (
   }
 
   // 如果没有指定Content-Type且不是FormData，设置默认内容类型
-  if (!isFormData && body &&
+  if (
+    !isFormData &&
+    body &&
     !(body instanceof FormData) &&
     !(body instanceof URLSearchParams) &&
-    !requestHeaders["Content-Type"]) {
+    !requestHeaders["Content-Type"]
+  ) {
     requestHeaders["Content-Type"] = "application/json";
   }
 
@@ -109,9 +104,9 @@ export const apiRequest = async (
   // 发送请求
   try {
     const response = await fetch(getApiUrl(path), requestOptions);
+
     return await handleResponse(response);
   } catch (error) {
-    console.error("API请求错误:", error);
     throw error;
   }
 };
@@ -120,6 +115,7 @@ export const apiRequest = async (
 export const login = async (username: string, password: string) => {
   // 创建 URL 编码的表单数据
   const formBody = new URLSearchParams();
+
   formBody.append("username", username);
   formBody.append("password", password);
   formBody.append("grant_type", "password");
@@ -342,7 +338,8 @@ export const getTasksStats = async (
   }
 
   const queryString = params.toString();
-  return await apiRequest(`api/v1/test/tasks/stats${queryString ? `?${queryString}` : ''}`);
+
+  return await apiRequest(`api/v1/test/tasks/stats${queryString ? `?${queryString}` : ""}`);
 };
 
 // 获取任务矩阵数据

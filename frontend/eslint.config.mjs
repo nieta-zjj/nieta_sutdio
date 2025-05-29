@@ -6,6 +6,8 @@ import _import from "eslint-plugin-import";
 import typescriptEslint from "@typescript-eslint/eslint-plugin";
 import jsxA11Y from "eslint-plugin-jsx-a11y";
 import prettier from "eslint-plugin-prettier";
+import security from "eslint-plugin-security";
+import sonarjs from "eslint-plugin-sonarjs";
 import globals from "globals";
 import tsParser from "@typescript-eslint/parser";
 import path from "node:path";
@@ -58,6 +60,8 @@ export default defineConfig([globalIgnores([
         "@typescript-eslint": typescriptEslint,
         "jsx-a11y": fixupPluginRules(jsxA11Y),
         prettier: fixupPluginRules(prettier),
+        security: fixupPluginRules(security),
+        sonarjs: fixupPluginRules(sonarjs),
     },
 
     languageOptions: {
@@ -86,11 +90,37 @@ export default defineConfig([globalIgnores([
     files: ["**/*.ts", "**/*.tsx"],
 
     rules: {
+        // 安全规则
+        "security/detect-object-injection": "warn",
+        "security/detect-non-literal-regexp": "warn",
+        "security/detect-unsafe-regex": "warn",
+        "security/detect-buffer-noassert": "warn",
+        "security/detect-child-process": "warn",
+        "security/detect-disable-mustache-escape": "warn",
+        "security/detect-eval-with-expression": "warn",
+        "security/detect-no-csrf-before-method-override": "warn",
+        "security/detect-non-literal-fs-filename": "warn",
+        "security/detect-non-literal-require": "warn",
+        "security/detect-possible-timing-attacks": "warn",
+        "security/detect-pseudoRandomBytes": "warn",
+
+        // 代码复杂度规则
+        "sonarjs/cognitive-complexity": ["warn", 15],
+        "sonarjs/no-duplicate-string": ["warn", { threshold: 5 }],
+        "sonarjs/no-identical-functions": "warn",
+        "sonarjs/no-collapsible-if": "warn",
+        "sonarjs/no-duplicated-branches": "warn",
+        "sonarjs/no-redundant-boolean": "warn",
+        "sonarjs/no-small-switch": "warn",
+        "sonarjs/prefer-immediate-return": "warn",
+        "sonarjs/prefer-single-boolean-return": "warn",
+
+        // 基础规则
         "no-console": "warn",
         "react/prop-types": "off",
         "react/jsx-uses-react": "off",
         "react/react-in-jsx-scope": "off",
-        "react-hooks/exhaustive-deps": "off",
+        "react-hooks/exhaustive-deps": "warn",
         "jsx-a11y/click-events-have-key-events": "warn",
         "jsx-a11y/interactive-supports-focus": "warn",
         "prettier/prettier": "warn",
@@ -139,13 +169,13 @@ export default defineConfig([globalIgnores([
             prev: "*",
             next: "return",
         }, {
-            blankLine: "always",
-            prev: ["const", "let", "var"],
-            next: "*",
-        }, {
-            blankLine: "any",
-            prev: ["const", "let", "var"],
-            next: ["const", "let", "var"],
-        }],
+                blankLine: "always",
+                prev: ["const", "let", "var"],
+                next: "*",
+            }, {
+                blankLine: "any",
+                prev: ["const", "let", "var"],
+                next: ["const", "let", "var"],
+            }],
     },
 }]);

@@ -9,7 +9,7 @@ export type IconSvgProps = SVGProps<SVGSVGElement> & {
  * 统一导出所有类型定义
  */
 
-export * from './search';
-export * from './api';
-export * from './vtoken';
-export * from './task';
+export * from "./search";
+export * from "./api";
+export * from "./vtoken";
+export * from "./task";

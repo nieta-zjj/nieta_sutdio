@@ -55,7 +55,7 @@ const NotificationItem = React.forwardRef<HTMLDivElement, NotificationItemProps>
           {
             "bg-primary-50/50": !isRead,
           },
-          className,
+          className
         )}
         {...props}
       >
@@ -79,7 +79,7 @@ const NotificationItem = React.forwardRef<HTMLDivElement, NotificationItemProps>
         </div>
       </div>
     );
-  },
+  }
 );
 
 NotificationItem.displayName = "NotificationItem";

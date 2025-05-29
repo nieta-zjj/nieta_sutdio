@@ -16,10 +16,16 @@ import {
   Tooltip,
   Tabs,
   Tab,
-  Switch
+  Switch,
 } from "@heroui/react";
 import { Icon } from "@iconify/react";
-import { getTasks, toggleTaskFavorite, getTask, toggleTaskDelete, getTasksStats } from "@/utils/apiClient";
+import {
+  getTasks,
+  toggleTaskFavorite,
+  getTask,
+  toggleTaskDelete,
+  getTasksStats,
+} from "@/utils/apiClient";
 import { reuseTaskSettings } from "@/utils/taskReuseService";
 import { TaskListItem, APIResponse } from "@/types/task";
 import { TaskStatusChip } from "@/components/task/task-status-chip";
@@ -58,16 +64,16 @@ export default function HistoryPage() {
 
   // 从URL参数中读取页数和筛选条件，并且初始化完成后立即加载数据
   useEffect(() => {
-    const pageParam = searchParams.get('page');
-    const statusParam = searchParams.get('status');
-    const usernameParam = searchParams.get('username');
-    const taskNameParam = searchParams.get('taskName');
-    const favoriteParam = searchParams.get('favorite');
-    const deletedParam = searchParams.get('deleted');
-    const minSubtasksParam = searchParams.get('minSubtasks');
-    const maxSubtasksParam = searchParams.get('maxSubtasks');
-    const startDateParam = searchParams.get('startDate');
-    const endDateParam = searchParams.get('endDate');
+    const pageParam = searchParams.get("page");
+    const statusParam = searchParams.get("status");
+    const usernameParam = searchParams.get("username");
+    const taskNameParam = searchParams.get("taskName");
+    const favoriteParam = searchParams.get("favorite");
+    const deletedParam = searchParams.get("deleted");
+    const minSubtasksParam = searchParams.get("minSubtasks");
+    const maxSubtasksParam = searchParams.get("maxSubtasks");
+    const startDateParam = searchParams.get("startDate");
+    const endDateParam = searchParams.get("endDate");
 
     // 批量设置状态
     let needsUpdate = false;
@@ -123,17 +129,17 @@ export default function HistoryPage() {
           start: {
             year: startDate.getFullYear(),
             month: startDate.getMonth() + 1,
-            day: startDate.getDate()
+            day: startDate.getDate(),
           },
           end: {
             year: endDate.getFullYear(),
             month: endDate.getMonth() + 1,
-            day: endDate.getDate()
-          }
+            day: endDate.getDate(),
+          },
         });
         needsUpdate = true;
       } catch (error) {
-        console.error('解析日期参数失败:', error);
+        console.error("解析日期参数失败:", error);
       }
     }
 
@@ -146,14 +152,14 @@ export default function HistoryPage() {
     const params = new URLSearchParams(searchParams.toString());
 
     Object.entries(updates).forEach(([key, value]) => {
-      if (value === null || value === '' || value === 1 && key === 'page') {
+      if (value === null || value === "" || (value === 1 && key === "page")) {
         params.delete(key);
       } else {
         params.set(key, value.toString());
       }
     });
 
-    const newUrl = params.toString() ? `?${params.toString()}` : '';
+    const newUrl = params.toString() ? `?${params.toString()}` : "";
     router.replace(`/model-testing/history${newUrl}`, { scroll: false });
   };
 
@@ -213,9 +219,9 @@ export default function HistoryPage() {
       const startDate = new Date(range.start.year, range.start.month - 1, range.start.day);
       const endDate = new Date(range.end.year, range.end.month - 1, range.end.day);
       updateUrlParams({
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0],
-        page: 1
+        startDate: startDate.toISOString().split("T")[0],
+        endDate: endDate.toISOString().split("T")[0],
+        page: 1,
       });
     } else {
       updateUrlParams({ startDate: null, endDate: null, page: 1 });
@@ -230,7 +236,7 @@ export default function HistoryPage() {
       month: "2-digit",
       day: "2-digit",
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     });
   };
 
@@ -244,15 +250,19 @@ export default function HistoryPage() {
         favorite: favoriteFilter === "favorite" ? true : undefined,
         deleted: deletedFilter === "deleted" ? true : false, // 默认不显示已删除的任务
         minSubtasks: minSubtasks ? parseInt(minSubtasks) : undefined,
-        maxSubtasks: maxSubtasks ? parseInt(maxSubtasks) : undefined
+        maxSubtasks: maxSubtasks ? parseInt(maxSubtasks) : undefined,
       };
 
       // 添加日期范围参数
       if (dateRange && dateRange.start && dateRange.end) {
-        const startDate = new Date(dateRange.start.year, dateRange.start.month - 1, dateRange.start.day);
+        const startDate = new Date(
+          dateRange.start.year,
+          dateRange.start.month - 1,
+          dateRange.start.day
+        );
         const endDate = new Date(dateRange.end.year, dateRange.end.month - 1, dateRange.end.day);
-        statsParams.startDate = startDate.toISOString().split('T')[0];
-        statsParams.endDate = endDate.toISOString().split('T')[0];
+        statsParams.startDate = startDate.toISOString().split("T")[0];
+        statsParams.endDate = endDate.toISOString().split("T")[0];
       }
 
       // 调用统计API
@@ -296,15 +306,19 @@ export default function HistoryPage() {
         favorite: favoriteFilter === "favorite" ? true : undefined,
         deleted: deletedFilter === "deleted" ? true : false, // 默认不显示已删除的任务
         minSubtasks: minSubtasks ? parseInt(minSubtasks) : undefined,
-        maxSubtasks: maxSubtasks ? parseInt(maxSubtasks) : undefined
+        maxSubtasks: maxSubtasks ? parseInt(maxSubtasks) : undefined,
       };
 
       // 添加日期范围参数
       if (dateRange && dateRange.start && dateRange.end) {
-        const startDate = new Date(dateRange.start.year, dateRange.start.month - 1, dateRange.start.day);
+        const startDate = new Date(
+          dateRange.start.year,
+          dateRange.start.month - 1,
+          dateRange.start.day
+        );
         const endDate = new Date(dateRange.end.year, dateRange.end.month - 1, dateRange.end.day);
-        apiParams.startDate = startDate.toISOString().split('T')[0];
-        apiParams.endDate = endDate.toISOString().split('T')[0];
+        apiParams.startDate = startDate.toISOString().split("T")[0];
+        apiParams.endDate = endDate.toISOString().split("T")[0];
       }
 
       // 调用API，传递所有参数
@@ -356,7 +370,7 @@ export default function HistoryPage() {
       maxSubtasks: null,
       startDate: null,
       endDate: null,
-      page: 1
+      page: 1,
     });
   };
 
@@ -373,7 +387,18 @@ export default function HistoryPage() {
     if (isInitialized) {
       loadTasks();
     }
-  }, [isInitialized, currentPage, statusFilter, usernameFilter, taskNameFilter, favoriteFilter, deletedFilter, minSubtasks, maxSubtasks, dateRange]);
+  }, [
+    isInitialized,
+    currentPage,
+    statusFilter,
+    usernameFilter,
+    taskNameFilter,
+    favoriteFilter,
+    deletedFilter,
+    minSubtasks,
+    maxSubtasks,
+    dateRange,
+  ]);
 
   return (
     <div className="w-full h-full flex flex-col px-6 py-6">
@@ -446,7 +471,7 @@ export default function HistoryPage() {
                   base: "w-full",
                   tabList: "gap-1 w-full",
                   tab: "h-7 px-3 py-0",
-                  cursor: "h-7"
+                  cursor: "h-7",
                 }}
               >
                 <Tab key="" title="全部" />
@@ -553,7 +578,11 @@ export default function HistoryPage() {
                   type="date"
                   placeholder="开始日期"
                   className="w-32"
-                  value={dateRange?.start ? `${dateRange.start.year}-${String(dateRange.start.month).padStart(2, '0')}-${String(dateRange.start.day).padStart(2, '0')}` : ''}
+                  value={
+                    dateRange?.start
+                      ? `${dateRange.start.year}-${String(dateRange.start.month).padStart(2, "0")}-${String(dateRange.start.day).padStart(2, "0")}`
+                      : ""
+                  }
                   onChange={(e) => {
                     const value = e.target.value;
                     if (value) {
@@ -561,11 +590,11 @@ export default function HistoryPage() {
                       const startCalendar = {
                         year: date.getFullYear(),
                         month: date.getMonth() + 1,
-                        day: date.getDate()
+                        day: date.getDate(),
                       };
                       handleDateRangeChange({
                         start: startCalendar,
-                        end: dateRange?.end || startCalendar
+                        end: dateRange?.end || startCalendar,
                       });
                     }
                   }}
@@ -576,7 +605,11 @@ export default function HistoryPage() {
                   type="date"
                   placeholder="结束日期"
                   className="w-32"
-                  value={dateRange?.end ? `${dateRange.end.year}-${String(dateRange.end.month).padStart(2, '0')}-${String(dateRange.end.day).padStart(2, '0')}` : ''}
+                  value={
+                    dateRange?.end
+                      ? `${dateRange.end.year}-${String(dateRange.end.month).padStart(2, "0")}-${String(dateRange.end.day).padStart(2, "0")}`
+                      : ""
+                  }
                   onChange={(e) => {
                     const value = e.target.value;
                     if (value) {
@@ -584,11 +617,11 @@ export default function HistoryPage() {
                       const endCalendar = {
                         year: date.getFullYear(),
                         month: date.getMonth() + 1,
-                        day: date.getDate()
+                        day: date.getDate(),
                       };
                       handleDateRangeChange({
                         start: dateRange?.start || endCalendar,
-                        end: endCalendar
+                        end: endCalendar,
                       });
                     }
                   }}
@@ -607,7 +640,7 @@ export default function HistoryPage() {
                     const todayCalendar = {
                       year: today.getFullYear(),
                       month: today.getMonth() + 1,
-                      day: today.getDate()
+                      day: today.getDate(),
                     };
                     handleDateRangeChange({ start: todayCalendar, end: todayCalendar });
                   }}
@@ -624,7 +657,7 @@ export default function HistoryPage() {
                     const yesterdayCalendar = {
                       year: yesterday.getFullYear(),
                       month: yesterday.getMonth() + 1,
-                      day: yesterday.getDate()
+                      day: yesterday.getDate(),
                     };
                     handleDateRangeChange({ start: yesterdayCalendar, end: yesterdayCalendar });
                   }}
@@ -641,12 +674,12 @@ export default function HistoryPage() {
                     const todayCalendar = {
                       year: today.getFullYear(),
                       month: today.getMonth() + 1,
-                      day: today.getDate()
+                      day: today.getDate(),
                     };
                     const lastWeekCalendar = {
                       year: lastWeek.getFullYear(),
                       month: lastWeek.getMonth() + 1,
-                      day: lastWeek.getDate()
+                      day: lastWeek.getDate(),
                     };
                     handleDateRangeChange({ start: lastWeekCalendar, end: todayCalendar });
                   }}
@@ -663,12 +696,12 @@ export default function HistoryPage() {
                     const todayCalendar = {
                       year: today.getFullYear(),
                       month: today.getMonth() + 1,
-                      day: today.getDate()
+                      day: today.getDate(),
                     };
                     const lastMonthCalendar = {
                       year: lastMonth.getFullYear(),
                       month: lastMonth.getMonth() + 1,
-                      day: lastMonth.getDate()
+                      day: lastMonth.getDate(),
                     };
                     handleDateRangeChange({ start: lastMonthCalendar, end: todayCalendar });
                   }}
@@ -701,209 +734,219 @@ export default function HistoryPage() {
         ) : (
           <div className="flex-1 flex flex-col min-h-0 bg-default-50 rounded-lg border border-default-200 overflow-hidden">
             {/* 任务卡片网格 */}
-            <div className={`flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 auto-rows-max overflow-y-auto p-4 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
-              {loading && tasks.length === 0 ? (
-                // 首次加载时显示骨架屏
-                Array.from({ length: 8 }).map((_, index) => (
-                  <Card key={index} className="animate-pulse">
-                    <CardBody className="p-4">
-                      <div className="space-y-3">
-                        <div className="h-4 bg-default-200 rounded w-3/4"></div>
-                        <div className="h-3 bg-default-200 rounded w-1/2"></div>
-                        <div className="h-3 bg-default-200 rounded w-2/3"></div>
-                        <div className="h-2 bg-default-200 rounded w-full"></div>
-                        <div className="h-8 bg-default-200 rounded w-full"></div>
-                      </div>
-                    </CardBody>
-                  </Card>
-                ))
-              ) : (
-                tasks.map((task) => (
-                  <Card key={task.id} className="hover:shadow-lg transition-shadow">
-                    <CardBody className="p-4">
-                      <div className="space-y-3">
-                        {/* 任务标题和状态 */}
-                        <div className="flex items-start justify-between">
-                          <h3 className="font-semibold text-sm truncate flex-1 pr-2">
-                            {task.name}
-                          </h3>
-                          <TaskStatusChip status={task.status} size="sm" />
+            <div
+              className={`flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 auto-rows-max overflow-y-auto p-4 ${loading ? "opacity-50 pointer-events-none" : ""}`}
+            >
+              {loading && tasks.length === 0
+                ? // 首次加载时显示骨架屏
+                  Array.from({ length: 8 }).map((_, index) => (
+                    <Card key={index} className="animate-pulse">
+                      <CardBody className="p-4">
+                        <div className="space-y-3">
+                          <div className="h-4 bg-default-200 rounded w-3/4"></div>
+                          <div className="h-3 bg-default-200 rounded w-1/2"></div>
+                          <div className="h-3 bg-default-200 rounded w-2/3"></div>
+                          <div className="h-2 bg-default-200 rounded w-full"></div>
+                          <div className="h-8 bg-default-200 rounded w-full"></div>
                         </div>
-
-                        {/* 用户和时间信息 */}
-                        <div className="space-y-1 text-xs text-default-500">
-                          <div className="flex items-center">
-                            <Icon icon="solar:user-linear" className="w-3 h-3 mr-1" />
-                            <span className="truncate">{task.username}</span>
+                      </CardBody>
+                    </Card>
+                  ))
+                : tasks.map((task) => (
+                    <Card key={task.id} className="hover:shadow-lg transition-shadow">
+                      <CardBody className="p-4">
+                        <div className="space-y-3">
+                          {/* 任务标题和状态 */}
+                          <div className="flex items-start justify-between">
+                            <h3 className="font-semibold text-sm truncate flex-1 pr-2">
+                              {task.name}
+                            </h3>
+                            <TaskStatusChip status={task.status} size="sm" />
                           </div>
-                          <div className="flex items-center">
-                            <Icon icon="solar:calendar-linear" className="w-3 h-3 mr-1" />
-                            <span>{formatTime(task.created_at)}</span>
-                          </div>
-                        </div>
 
-                        {/* 进度信息 */}
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-1">
-                              <span className="text-default-600">进度:</span>
-                              <span className="text-success-600 font-medium">
-                                {task.completed_images}
-                              </span>
-                              {task.failed_images > 0 && (
-                                <>
-                                  <span className="text-default-400">(</span>
-                                  <span className="text-danger-600 font-medium">
-                                    {task.failed_images}
-                                  </span>
-                                  <span className="text-default-400">)</span>
-                                </>
-                              )}
-                              <span className="text-default-500">
-                                /{task.total_images} 张
-                              </span>
+                          {/* 用户和时间信息 */}
+                          <div className="space-y-1 text-xs text-default-500">
+                            <div className="flex items-center">
+                              <Icon icon="solar:user-linear" className="w-3 h-3 mr-1" />
+                              <span className="truncate">{task.username}</span>
                             </div>
-                            <span className="font-medium">{task.progress}%</span>
+                            <div className="flex items-center">
+                              <Icon icon="solar:calendar-linear" className="w-3 h-3 mr-1" />
+                              <span>{formatTime(task.created_at)}</span>
+                            </div>
                           </div>
-                          <CustomProgress
-                            total={task.total_images}
-                            completed={task.completed_images}
-                            failed={task.failed_images}
-                            size="sm"
-                            className="w-full"
-                          />
-                        </div>
 
-                        {/* 任务ID */}
-                        <div className="flex items-center">
-                          <span className="text-xs text-default-400 font-mono truncate">
-                            ID: {task.id}
-                          </span>
-                          <Tooltip content="复制任务ID">
-                            <Button
+                          {/* 进度信息 */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-1">
+                                <span className="text-default-600">进度:</span>
+                                <span className="text-success-600 font-medium">
+                                  {task.completed_images}
+                                </span>
+                                {task.failed_images > 0 && (
+                                  <>
+                                    <span className="text-default-400">(</span>
+                                    <span className="text-danger-600 font-medium">
+                                      {task.failed_images}
+                                    </span>
+                                    <span className="text-default-400">)</span>
+                                  </>
+                                )}
+                                <span className="text-default-500">/{task.total_images} 张</span>
+                              </div>
+                              <span className="font-medium">{task.progress}%</span>
+                            </div>
+                            <CustomProgress
+                              total={task.total_images}
+                              completed={task.completed_images}
+                              failed={task.failed_images}
                               size="sm"
-                              variant="light"
-                              isIconOnly
-                              className="h-4 w-4 min-w-4 ml-1"
-                              onPress={() => {
-                                navigator.clipboard.writeText(task.id);
-                              }}
-                            >
-                              <Icon icon="solar:copy-linear" className="w-3 h-3" />
-                            </Button>
-                          </Tooltip>
-                        </div>
+                              className="w-full"
+                            />
+                          </div>
 
-                        {/* 操作按钮 */}
-                        <div className="flex items-center justify-between pt-2 border-t border-default-100">
-                          <div className="flex items-center gap-2">
-                            <Tooltip content="收藏任务">
+                          {/* 任务ID */}
+                          <div className="flex items-center">
+                            <span className="text-xs text-default-400 font-mono truncate">
+                              ID: {task.id}
+                            </span>
+                            <Tooltip content="复制任务ID">
                               <Button
                                 size="sm"
-                                variant="flat"
+                                variant="light"
                                 isIconOnly
-                                onPress={async () => {
-                                  try {
-                                    await toggleTaskFavorite(task.id);
-                                    // 重新加载任务列表以更新收藏状态
-                                    loadTasks();
-                                    toast.success(task.is_favorite ? "取消收藏成功" : "收藏成功");
-                                  } catch (error) {
-                                    console.error("切换收藏状态失败:", error);
-                                    toast.error("操作失败");
-                                  }
+                                className="h-4 w-4 min-w-4 ml-1"
+                                onPress={() => {
+                                  navigator.clipboard.writeText(task.id);
                                 }}
                               >
-                                <Icon
-                                  icon={task.is_favorite ? "solar:star-bold" : "solar:star-linear"}
-                                  className={`w-4 h-4 ${task.is_favorite ? "text-warning" : ""}`}
-                                />
-                              </Button>
-                            </Tooltip>
-
-                            <Tooltip content={task.is_deleted ? "恢复任务" : "删除任务"}>
-                              <Button
-                                size="sm"
-                                variant="flat"
-                                isIconOnly
-                                onPress={async () => {
-                                  try {
-                                    await toggleTaskDelete(task.id);
-                                    // 重新加载任务列表以更新删除状态
-                                    loadTasks();
-                                    toast.success(task.is_deleted ? "恢复任务成功" : "删除任务成功");
-                                  } catch (error) {
-                                    console.error("切换删除状态失败:", error);
-                                    toast.error("操作失败");
-                                  }
-                                }}
-                              >
-                                <Icon
-                                  icon={task.is_deleted ? "solar:refresh-linear" : "solar:trash-bin-minimalistic-linear"}
-                                  className={`w-4 h-4 ${task.is_deleted ? "text-success" : "text-danger"}`}
-                                />
+                                <Icon icon="solar:copy-linear" className="w-3 h-3" />
                               </Button>
                             </Tooltip>
                           </div>
 
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              variant="flat"
-                              onPress={async () => {
-                                try {
-                                  // 使用新的复用服务
-                                  const result = await reuseTaskSettings(task.id);
-
-                                  if (result.success) {
-                                    // 检查是否为旧格式任务
-                                    if (result.data?.is_old_format) {
-                                      // 弹出警告对话框
-                                      const shouldContinue = confirm(
-                                        "警告：这是一个旧格式的任务数据。\n\n" +
-                                        "复用后的参数可能需要手动检查和调整，请在提交前仔细核对所有参数设置。\n\n" +
-                                        "确定要继续复用这个任务吗？"
-                                      );
-
-                                      if (!shouldContinue) {
-                                        // 用户取消，清除已保存的复用数据
-                                        const { clearReusedTaskData } = await import("@/utils/taskReuseService");
-                                        clearReusedTaskData();
-                                        return;
-                                      }
+                          {/* 操作按钮 */}
+                          <div className="flex items-center justify-between pt-2 border-t border-default-100">
+                            <div className="flex items-center gap-2">
+                              <Tooltip content="收藏任务">
+                                <Button
+                                  size="sm"
+                                  variant="flat"
+                                  isIconOnly
+                                  onPress={async () => {
+                                    try {
+                                      await toggleTaskFavorite(task.id);
+                                      // 重新加载任务列表以更新收藏状态
+                                      loadTasks();
+                                      toast.success(task.is_favorite ? "取消收藏成功" : "收藏成功");
+                                    } catch (error) {
+                                      console.error("切换收藏状态失败:", error);
+                                      toast.error("操作失败");
                                     }
+                                  }}
+                                >
+                                  <Icon
+                                    icon={
+                                      task.is_favorite ? "solar:star-bold" : "solar:star-linear"
+                                    }
+                                    className={`w-4 h-4 ${task.is_favorite ? "text-warning" : ""}`}
+                                  />
+                                </Button>
+                              </Tooltip>
 
-                                    // 跳转到测试页面
-                                    router.push('/model-testing/test');
-                                    toast.success(`已选择复用任务: ${task.name}${result.data?.is_old_format ? ' (旧格式任务，请检查参数)' : ''}`);
-                                  } else {
-                                    toast.error(result.message || "复用任务失败");
+                              <Tooltip content={task.is_deleted ? "恢复任务" : "删除任务"}>
+                                <Button
+                                  size="sm"
+                                  variant="flat"
+                                  isIconOnly
+                                  onPress={async () => {
+                                    try {
+                                      await toggleTaskDelete(task.id);
+                                      // 重新加载任务列表以更新删除状态
+                                      loadTasks();
+                                      toast.success(
+                                        task.is_deleted ? "恢复任务成功" : "删除任务成功"
+                                      );
+                                    } catch (error) {
+                                      console.error("切换删除状态失败:", error);
+                                      toast.error("操作失败");
+                                    }
+                                  }}
+                                >
+                                  <Icon
+                                    icon={
+                                      task.is_deleted
+                                        ? "solar:refresh-linear"
+                                        : "solar:trash-bin-minimalistic-linear"
+                                    }
+                                    className={`w-4 h-4 ${task.is_deleted ? "text-success" : "text-danger"}`}
+                                  />
+                                </Button>
+                              </Tooltip>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="flat"
+                                onPress={async () => {
+                                  try {
+                                    // 使用新的复用服务
+                                    const result = await reuseTaskSettings(task.id);
+
+                                    if (result.success) {
+                                      // 检查是否为旧格式任务
+                                      if (result.data?.is_old_format) {
+                                        // 弹出警告对话框
+                                        const shouldContinue = confirm(
+                                          "警告：这是一个旧格式的任务数据。\n\n" +
+                                            "复用后的参数可能需要手动检查和调整，请在提交前仔细核对所有参数设置。\n\n" +
+                                            "确定要继续复用这个任务吗？"
+                                        );
+
+                                        if (!shouldContinue) {
+                                          // 用户取消，清除已保存的复用数据
+                                          const { clearReusedTaskData } = await import(
+                                            "@/utils/taskReuseService"
+                                          );
+                                          clearReusedTaskData();
+                                          return;
+                                        }
+                                      }
+
+                                      // 跳转到测试页面
+                                      router.push("/model-testing/test");
+                                      toast.success(
+                                        `已选择复用任务: ${task.name}${result.data?.is_old_format ? " (旧格式任务，请检查参数)" : ""}`
+                                      );
+                                    } else {
+                                      toast.error(result.message || "复用任务失败");
+                                    }
+                                  } catch (error) {
+                                    console.error("复用任务失败:", error);
+                                    toast.error("复用任务失败");
                                   }
-                                } catch (error) {
-                                  console.error("复用任务失败:", error);
-                                  toast.error("复用任务失败");
-                                }
-                              }}
-                            >
-                              复用
-                            </Button>
+                                }}
+                              >
+                                复用
+                              </Button>
 
-                            <Button
-                              size="sm"
-                              variant="flat"
-                              onPress={() => {
-                                router.push(`/model-testing/history/${task.id}`);
-                              }}
-                            >
-                              查看详情
-                            </Button>
+                              <Button
+                                size="sm"
+                                variant="flat"
+                                onPress={() => {
+                                  router.push(`/model-testing/history/${task.id}`);
+                                }}
+                              >
+                                查看详情
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </CardBody>
-                  </Card>
-                ))
-              )}
+                      </CardBody>
+                    </Card>
+                  ))}
             </div>
           </div>
         )}

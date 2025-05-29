@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+pnpm-lock.yaml
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+
+# Environment files
+.env*
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Example directory
+example/
+
+# Generated files
+*.tsbuildinfo
+coverage/
+
+# Public assets
+public/
+
+# Config files that should not be formatted
+*.config.js
+*.config.mjs
+*.config.ts

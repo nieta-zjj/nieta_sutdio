@@ -1,0 +1,25 @@
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+  issue_comment:
+jobs:
+  pr_agent_job:
+    if: ${{ github.event.sender.type != 'Bot' }}
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: write
+    name: Run pr agent on every pull request, respond to user comments
+    steps:
+      - name: PR Agent action step
+        id: pragent
+        uses: qodo-ai/pr-agent@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # CONFIG.MODEL: "openai/ep-20250204200515-42w9b"
+          # CONFIG.MODEL: "deepseek/deepseek-reasoner"
+          CONFIG.MODEL: "deepseek/deepseek-chat"
+          OPENAI.API_BASE: ${{ secrets.ARK_API_BASE }}
+          OPENAI.KEY: ${{ secrets.ARK_API_KEY }}
+          DEEPSEEK.KEY: ${{ secrets.DEEPSEEK_API_KEY }}

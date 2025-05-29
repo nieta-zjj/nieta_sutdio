@@ -9,7 +9,7 @@ import {
   Button,
   Pagination,
   Spinner,
-  Tooltip
+  Tooltip,
 } from "@heroui/react";
 import { Icon } from "@iconify/react";
 import { getFavoriteTasks, toggleTaskFavorite, getTask } from "@/utils/apiClient";
@@ -31,7 +31,7 @@ export default function FavoritesPage() {
 
   // 从URL参数中读取页数
   useEffect(() => {
-    const pageParam = searchParams.get('page');
+    const pageParam = searchParams.get("page");
     if (pageParam) {
       const pageNumber = parseInt(pageParam, 10);
       if (pageNumber > 0) {
@@ -44,12 +44,12 @@ export default function FavoritesPage() {
   const updatePageInUrl = (page: number) => {
     const params = new URLSearchParams(searchParams.toString());
     if (page === 1) {
-      params.delete('page');
+      params.delete("page");
     } else {
-      params.set('page', page.toString());
+      params.set("page", page.toString());
     }
 
-    const newUrl = params.toString() ? `?${params.toString()}` : '';
+    const newUrl = params.toString() ? `?${params.toString()}` : "";
     router.replace(`/model-testing/favorites${newUrl}`, { scroll: false });
   };
 
@@ -66,7 +66,7 @@ export default function FavoritesPage() {
       month: "2-digit",
       day: "2-digit",
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     });
   };
 
@@ -98,9 +98,7 @@ export default function FavoritesPage() {
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <h2 className="text-xl font-medium mb-4 pt-2 pb-4">收藏任务</h2>
-            <p className="text-sm text-default-500 mb-4">
-              共收藏了 {totalTasks} 个任务
-            </p>
+            <p className="text-sm text-default-500 mb-4">共收藏了 {totalTasks} 个任务</p>
           </div>
         </div>
 
@@ -114,148 +112,153 @@ export default function FavoritesPage() {
         ) : (
           <>
             {/* 任务卡片网格 */}
-            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
-              {loading && tasks.length === 0 ? (
-                // 首次加载时显示骨架屏
-                Array.from({ length: 8 }).map((_, index) => (
-                  <Card key={index} className="animate-pulse">
-                    <CardBody className="p-4">
-                      <div className="space-y-3">
-                        <div className="h-4 bg-default-200 rounded w-3/4"></div>
-                        <div className="h-3 bg-default-200 rounded w-1/2"></div>
-                        <div className="h-3 bg-default-200 rounded w-2/3"></div>
-                        <div className="h-2 bg-default-200 rounded w-full"></div>
-                        <div className="h-8 bg-default-200 rounded w-full"></div>
-                      </div>
-                    </CardBody>
-                  </Card>
-                ))
-              ) : (
-                tasks.map((task) => (
-                  <Card key={task.id} className="hover:shadow-lg transition-shadow">
-                    <CardBody className="p-4">
-                      <div className="space-y-3">
-                        {/* 任务标题和状态 */}
-                        <div className="flex items-start justify-between">
-                          <h3 className="font-semibold text-sm truncate flex-1 pr-2">
-                            {task.name}
-                          </h3>
-                          <TaskStatusChip status={task.status} size="sm" />
+            <div
+              className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 ${loading ? "opacity-50 pointer-events-none" : ""}`}
+            >
+              {loading && tasks.length === 0
+                ? // 首次加载时显示骨架屏
+                  Array.from({ length: 8 }).map((_, index) => (
+                    <Card key={index} className="animate-pulse">
+                      <CardBody className="p-4">
+                        <div className="space-y-3">
+                          <div className="h-4 bg-default-200 rounded w-3/4"></div>
+                          <div className="h-3 bg-default-200 rounded w-1/2"></div>
+                          <div className="h-3 bg-default-200 rounded w-2/3"></div>
+                          <div className="h-2 bg-default-200 rounded w-full"></div>
+                          <div className="h-8 bg-default-200 rounded w-full"></div>
                         </div>
-
-                        {/* 用户和时间信息 */}
-                        <div className="space-y-1 text-xs text-default-500">
-                          <div className="flex items-center">
-                            <Icon icon="solar:user-linear" className="w-3 h-3 mr-1" />
-                            <span className="truncate">{task.username}</span>
+                      </CardBody>
+                    </Card>
+                  ))
+                : tasks.map((task) => (
+                    <Card key={task.id} className="hover:shadow-lg transition-shadow">
+                      <CardBody className="p-4">
+                        <div className="space-y-3">
+                          {/* 任务标题和状态 */}
+                          <div className="flex items-start justify-between">
+                            <h3 className="font-semibold text-sm truncate flex-1 pr-2">
+                              {task.name}
+                            </h3>
+                            <TaskStatusChip status={task.status} size="sm" />
                           </div>
-                          <div className="flex items-center">
-                            <Icon icon="solar:calendar-linear" className="w-3 h-3 mr-1" />
-                            <span>{formatTime(task.created_at)}</span>
+
+                          {/* 用户和时间信息 */}
+                          <div className="space-y-1 text-xs text-default-500">
+                            <div className="flex items-center">
+                              <Icon icon="solar:user-linear" className="w-3 h-3 mr-1" />
+                              <span className="truncate">{task.username}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <Icon icon="solar:calendar-linear" className="w-3 h-3 mr-1" />
+                              <span>{formatTime(task.created_at)}</span>
+                            </div>
+                          </div>
+
+                          {/* 进度信息 */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-default-600">
+                                {task.processed_images}/{task.total_images} 张
+                              </span>
+                              <span className="font-medium">{task.progress}%</span>
+                            </div>
+                            <Progress
+                              value={task.progress}
+                              color={
+                                task.status === "completed"
+                                  ? "success"
+                                  : task.status === "failed"
+                                    ? "danger"
+                                    : task.status === "cancelled"
+                                      ? "warning"
+                                      : task.progress >= 50
+                                        ? "primary"
+                                        : "secondary"
+                              }
+                              size="sm"
+                              className="w-full"
+                            />
+                          </div>
+
+                          {/* 任务ID */}
+                          <div className="text-xs text-default-400 font-mono truncate">
+                            ID: {task.id}
+                          </div>
+
+                          {/* 操作按钮 */}
+                          <div className="flex items-center gap-2 pt-2 border-t border-default-100">
+                            <Tooltip content="取消收藏">
+                              <Button
+                                size="sm"
+                                variant="flat"
+                                isIconOnly
+                                onPress={async () => {
+                                  try {
+                                    await toggleTaskFavorite(task.id);
+                                    // 重新加载收藏列表
+                                    loadFavoriteTasks();
+                                    toast.success("已取消收藏");
+                                  } catch (error) {
+                                    console.error("取消收藏失败:", error);
+                                    toast.error("操作失败");
+                                  }
+                                }}
+                              >
+                                <Icon icon="solar:star-bold" className="w-4 h-4 text-warning" />
+                              </Button>
+                            </Tooltip>
+
+                            <Tooltip content="复用任务参数">
+                              <Button
+                                size="sm"
+                                variant="flat"
+                                isIconOnly
+                                onPress={async () => {
+                                  try {
+                                    // 获取任务详情
+                                    const response = await getTask(task.id, false);
+                                    const taskDetail = response.data;
+
+                                    // 将任务详情存储到localStorage
+                                    localStorage.setItem(
+                                      "reusedTask",
+                                      JSON.stringify({
+                                        id: task.id,
+                                        name: task.name,
+                                        detail: taskDetail,
+                                      })
+                                    );
+
+                                    // 跳转到测试页面
+                                    router.push("/model-testing/test");
+                                    toast.success(`已选择复用任务: ${task.name}`);
+                                  } catch (error) {
+                                    console.error("获取任务详情失败:", error);
+                                    toast.error("无法获取任务参数");
+                                  }
+                                }}
+                              >
+                                <Icon icon="solar:copy-linear" className="w-4 h-4" />
+                              </Button>
+                            </Tooltip>
+
+                            <Tooltip content="查看详情">
+                              <Button
+                                size="sm"
+                                variant="flat"
+                                isIconOnly
+                                onPress={() => {
+                                  router.push(`/model-testing/history/${task.id}`);
+                                }}
+                              >
+                                <Icon icon="solar:eye-linear" className="w-4 h-4" />
+                              </Button>
+                            </Tooltip>
                           </div>
                         </div>
-
-                        {/* 进度信息 */}
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-default-600">
-                              {task.processed_images}/{task.total_images} 张
-                            </span>
-                            <span className="font-medium">{task.progress}%</span>
-                          </div>
-                          <Progress
-                            value={task.progress}
-                            color={
-                              task.status === "completed" ? "success" :
-                                task.status === "failed" ? "danger" :
-                                  task.status === "cancelled" ? "warning" :
-                                    task.progress >= 50 ? "primary" : "secondary"
-                            }
-                            size="sm"
-                            className="w-full"
-                          />
-                        </div>
-
-                        {/* 任务ID */}
-                        <div className="text-xs text-default-400 font-mono truncate">
-                          ID: {task.id}
-                        </div>
-
-                        {/* 操作按钮 */}
-                        <div className="flex items-center gap-2 pt-2 border-t border-default-100">
-                          <Tooltip content="取消收藏">
-                            <Button
-                              size="sm"
-                              variant="flat"
-                              isIconOnly
-                              onPress={async () => {
-                                try {
-                                  await toggleTaskFavorite(task.id);
-                                  // 重新加载收藏列表
-                                  loadFavoriteTasks();
-                                  toast.success("已取消收藏");
-                                } catch (error) {
-                                  console.error("取消收藏失败:", error);
-                                  toast.error("操作失败");
-                                }
-                              }}
-                            >
-                              <Icon
-                                icon="solar:star-bold"
-                                className="w-4 h-4 text-warning"
-                              />
-                            </Button>
-                          </Tooltip>
-
-                          <Tooltip content="复用任务参数">
-                            <Button
-                              size="sm"
-                              variant="flat"
-                              isIconOnly
-                              onPress={async () => {
-                                try {
-                                  // 获取任务详情
-                                  const response = await getTask(task.id, false);
-                                  const taskDetail = response.data;
-
-                                  // 将任务详情存储到localStorage
-                                  localStorage.setItem('reusedTask', JSON.stringify({
-                                    id: task.id,
-                                    name: task.name,
-                                    detail: taskDetail
-                                  }));
-
-                                  // 跳转到测试页面
-                                  router.push('/model-testing/test');
-                                  toast.success(`已选择复用任务: ${task.name}`);
-                                } catch (error) {
-                                  console.error("获取任务详情失败:", error);
-                                  toast.error("无法获取任务参数");
-                                }
-                              }}
-                            >
-                              <Icon icon="solar:copy-linear" className="w-4 h-4" />
-                            </Button>
-                          </Tooltip>
-
-                          <Tooltip content="查看详情">
-                            <Button
-                              size="sm"
-                              variant="flat"
-                              isIconOnly
-                              onPress={() => {
-                                router.push(`/model-testing/history/${task.id}`);
-                              }}
-                            >
-                              <Icon icon="solar:eye-linear" className="w-4 h-4" />
-                            </Button>
-                          </Tooltip>
-                        </div>
-                      </div>
-                    </CardBody>
-                  </Card>
-                ))
-              )}
+                      </CardBody>
+                    </Card>
+                  ))}
             </div>
 
             {/* 加载指示器 */}

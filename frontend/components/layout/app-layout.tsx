@@ -51,7 +51,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   }, [pathname]);
 
   // 获取当前模式的侧边栏配置
-  const currentModeConfig = workspaceModes.find(m => m.key === currentMode);
+  const currentModeConfig = workspaceModes.find((m) => m.key === currentMode);
   const sidebarItems = currentModeConfig?.items || [];
 
   return (
@@ -76,9 +76,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
       {/* 主内容区 */}
       <div className="flex-1 overflow-auto">
-        <main className="p-6">
-          {children}
-        </main>
+        <main className="p-6">{children}</main>
       </div>
     </div>
   );

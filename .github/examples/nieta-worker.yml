@@ -1,0 +1,146 @@
+name: nieta-worker-ci
+
+env:
+  NOTIFICATITON_TEMPLATE: '{"msg_type":"post","content":{"post":{"zh_cn":{"title":"CI/CD 通知: \($main_line): \($ref)","content":[[{"tag":"text","text":"    Commit: "},{"tag":"a","text":"\($commitId)","href":"https://github.com/talesofai/talesofai/commit/\($commitId)"},{"tag":"text","text":"\n    Ref: "},{"tag":"a","text":"\($ref)","href":"https://github.com/talesofai/talesofai/tree/\($ref)"},{"tag":"text","text":"\n    Triggered by: \($trigger)\n    Deployment: \($deployment)\n    Image: \($imageName)"}]]}}}}'
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment:
+        type: choice
+        description: '选择部署到何环境'
+        required: true
+        options:
+          - 'dev'
+          - 'none'
+      force_build:
+        type: boolean
+        description: '不检查 Docker 镜像是否已存在，强制重构建'
+      notify_deployment:
+        type: boolean
+        description: '在前后端联调群中发布部署通知'
+
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('Worker - {0} - {1}', inputs.deployment, github.ref_name) || '' }}
+
+jobs:
+  check-artifact:
+    runs-on: ubuntu-latest
+    outputs:
+      DOCKER_IMAGE_EXIST: ${{steps.check_docker_image.outputs.DOCKER_IMAGE_EXIST}}
+      DOCKER_TAG: ${{steps.calc_img_tag.outputs.DOCKER_TAG}}
+
+    steps:
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ vars.DOCKER_REGISTRY }}
+        username: ${{ vars.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+
+    - name: Calculate image name
+      id: calc_img_tag
+      run: |
+        export DOCKER_TAG=`echo "worker-"${GITHUB_REF_NAME} | sed 's/\//_/g'`-`echo ${GITHUB_SHA} | cut -c1-8`
+        echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_OUTPUT
+        echo "::notice Using Docker image tag: $DOCKER_TAG"
+    - name: Check if Docker image exists
+      id: check_docker_image
+      run: |
+        image="${{ vars.DOCKER_REGISTRY }}/talesofai/talesofai"
+        tag="${{ steps.calc_img_tag.outputs.DOCKER_TAG }}"
+
+        if docker manifest inspect "${image}:${tag}" >/dev/null 2>&1; then
+          echo "Docker image ${image}:${tag} already exist, skip build"
+          echo "DOCKER_IMAGE_EXIST=true" >> $GITHUB_OUTPUT
+        else
+          echo "Docker image ${image}:${tag} not exist, ready for build"
+          echo "DOCKER_IMAGE_EXIST=false" >> $GITHUB_OUTPUT
+        fi
+
+  build:
+    needs: [check-artifact]
+    if: ${{always() && (inputs.force_build || needs.check-artifact.outputs.DOCKER_IMAGE_EXIST != 'true')}}
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ vars.DOCKER_REGISTRY }}
+          username: ${{ vars.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+
+      - name: Send Start Build Message
+        run: >
+          jq --null-input --arg main_line "开始构建" --arg commitId ${{ github.sha }} --arg imageName '${{ needs['check-artifact'].outputs.DOCKER_TAG }}' --arg ref '${{ github.ref_name }}' --arg trigger '${{ github.actor }}' --arg deployment '${{ inputs.deployment }}' '${{ env.NOTIFICATITON_TEMPLATE }}' | curl -X POST -H "Content-Type: application/json" --data-binary @- '${{ secrets.WEBHOOK_CICD_GROUP }}'
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build Docker and push
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend
+          file: ./backend/DockerfileWorker
+
+          cache-from: ${{inputs.force_build != true && 'type=gha,scope=talesofai-worker-docker-build' || ''}}
+          cache-to: type=gha,mode=max,scope=talesofai-worker-docker-build
+
+          push: true
+          tags: ${{ vars.DOCKER_REGISTRY }}/talesofai/talesofai:${{needs['check-artifact'].outputs.DOCKER_TAG}}
+          platforms: linux/amd64
+
+      - name: Send Build Success Message
+        if: ${{success()}}
+        run: >
+          jq --null-input --arg main_line "构建成功" --arg commitId ${{ github.sha }} --arg imageName '${{ needs['check-artifact'].outputs.DOCKER_TAG }}' --arg ref '${{ github.ref_name }}' --arg trigger '${{ github.actor }}' --arg deployment '${{ inputs.deployment }}' '${{ env.NOTIFICATITON_TEMPLATE }}' | curl -X POST -H "Content-Type: application/json" --data-binary @- '${{ secrets.WEBHOOK_CICD_GROUP }}'
+      - name: Send Build Failure Message
+        if: ${{failure()}}
+        run: >
+          jq --null-input --arg main_line "构建失败" --arg commitId ${{ github.sha }} --arg imageName '${{ needs['check-artifact'].outputs.DOCKER_TAG }}' --arg ref '${{ github.ref_name }}' --arg trigger '${{ github.actor }}' --arg deployment '${{ inputs.deployment }}' '${{ env.NOTIFICATITON_TEMPLATE }}' | curl -X POST -H "Content-Type: application/json" --data-binary @- '${{ secrets.WEBHOOK_CICD_GROUP }}'
+
+  deploy:
+    needs:
+      - build
+      - check-artifact
+    if: ${{!failure() && !cancelled() && inputs.deployment != 'none' && inputs.deployment != null}}
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{inputs.deployment}}
+    steps:
+      - name: Send Start Deploy Message
+        run: >
+          jq --null-input --arg main_line "开始部署" --arg commitId ${{ github.sha }} --arg imageName '${{ needs['check-artifact'].outputs.DOCKER_TAG }}' --arg ref '${{ github.ref_name }}' --arg trigger '${{ github.actor }}' --arg deployment '${{ inputs.deployment }}' '${{ env.NOTIFICATITON_TEMPLATE }}' | curl -X POST -H "Content-Type: application/json" --data-binary @- '${{ secrets.WEBHOOK_CICD_GROUP }}'
+      - name: Calculate Kube args
+        id: calc_kube_args
+        run: |
+          if [ "${{inputs.deployment}}" = "dev" ]; then
+            echo "KUBE_NAMESPACE=dev" >> $GITHUB_OUTPUT
+            echo "KUBE_DEPLOYMENT=talesofai-worker" >> $GITHUB_OUTPUT
+          else
+            echo "KUBE_NAMESPACE=unknown" >> $GITHUB_OUTPUT
+            echo "KUBE_DEPLOYMENT=talesofai-unknown" >> $GITHUB_OUTPUT
+          fi
+      - name: Deploy Image
+        uses: actions-hub/kubectl@master
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        with:
+          args: set image deployment/${{steps.calc_kube_args.outputs.KUBE_DEPLOYMENT}} *=${{ vars.DOCKER_REGISTRY_K8S }}/talesofai/talesofai:${{needs['check-artifact'].outputs.DOCKER_TAG}} -n ${{steps.calc_kube_args.outputs.KUBE_NAMESPACE}}
+
+      - name: Send Deploy Success Message
+        if: ${{success()}}
+        run: >
+          jq --null-input --arg main_line "部署成功" --arg commitId ${{ github.sha }} --arg imageName '${{ needs['check-artifact'].outputs.DOCKER_TAG }}' --arg ref '${{ github.ref_name }}' --arg trigger '${{ github.actor }}' --arg deployment '${{ inputs.deployment }}' '${{ env.NOTIFICATITON_TEMPLATE }}' | curl -X POST -H "Content-Type: application/json" --data-binary @- '${{ secrets.WEBHOOK_CICD_GROUP }}';
+          if [ "${{inputs.notify_deployment}}" = "true" ]; then jq --null-input --arg main_line "后端部署" --arg commitId ${{ github.sha }} --arg imageName '${{ needs['check-artifact'].outputs.DOCKER_TAG }}' --arg ref '${{ github.ref_name }}' --arg trigger '${{ github.actor }}' --arg deployment '${{ inputs.deployment }}' '${{ env.NOTIFICATITON_TEMPLATE }}' | curl -X POST -H "Content-Type: application/json" --data-binary @- '${{ secrets.WEBHOOK_FEBE_GROUP }}'; fi
+      - name: Send Deploy Failure Message
+        if: ${{failure()}}
+        run: >
+          jq --null-input --arg main_line "部署失败" --arg commitId ${{ github.sha }} --arg imageName '${{ needs['check-artifact'].outputs.DOCKER_TAG }}' --arg ref '${{ github.ref_name }}' --arg trigger '${{ github.actor }}' --arg deployment '${{ inputs.deployment }}' '${{ env.NOTIFICATITON_TEMPLATE }}' | curl -X POST -H "Content-Type: application/json" --data-binary @- '${{ secrets.WEBHOOK_CICD_GROUP }}'

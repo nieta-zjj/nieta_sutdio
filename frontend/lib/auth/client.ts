@@ -1,10 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-
-// 导入客户端存储工具
-import { getStorageItem, setStorageItem, removeStorageItem } from "./client-storage";
+import { createContext, useContext } from "react";
 
 // 用户类型定义
 export interface User {

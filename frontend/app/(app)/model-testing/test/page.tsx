@@ -23,7 +23,7 @@ import {
   ModalContent,
   ModalHeader,
   ModalBody,
-  ModalFooter
+  ModalFooter,
 } from "@heroui/react";
 import { Icon } from "@iconify/react";
 import { VTokenSelector } from "@/components/vtoken";
@@ -40,14 +40,13 @@ import {
   IsLuminaParam,
   LuminaModelNameParam,
   LuminaCfgParam,
-  LuminaStepParam
+  LuminaStepParam,
 } from "@/components/test_params";
 import { apiRequest } from "@/utils/apiClient";
 import { toast } from "sonner";
 import { calculateTaskCount, formatTaskCount, isTaskCountExceeded } from "@/utils/taskCalculator";
 import { useAuth } from "@/lib/auth/client";
 import { LoginModal } from "@/components/login/login-modal";
-
 
 // 添加隐藏滚动条的样式
 const hideScrollbarStyle = `
@@ -114,20 +113,50 @@ export default function TestPage() {
   // 添加提交状态
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   // 添加提交结果状态
-  const [submitResult, setSubmitResult] = useState<{ success: boolean; taskId?: string; message?: string } | null>(null);
+  const [submitResult, setSubmitResult] = useState<{
+    success: boolean;
+    taskId?: string;
+    message?: string;
+  } | null>(null);
 
   // 复用任务状态
-  const [reusedTask, setReusedTask] = useState<{ id: string; name: string; detail: any } | null>(null);
+  const [reusedTask, setReusedTask] = useState<{ id: string; name: string; detail: any } | null>(
+    null
+  );
 
   // Modal状态管理
-  const { isOpen: isValidationModalOpen, onOpen: onValidationModalOpen, onOpenChange: onValidationModalChange } = useDisclosure();
-  const { isOpen: isResetModalOpen, onOpen: onResetModalOpen, onOpenChange: onResetModalChange } = useDisclosure();
-  const { isOpen: isJsonErrorModalOpen, onOpen: onJsonErrorModalOpen, onOpenChange: onJsonErrorModalChange } = useDisclosure();
-  const { isOpen: isTaskConfirmModalOpen, onOpen: onTaskConfirmModalOpen, onOpenChange: onTaskConfirmModalChange } = useDisclosure();
-  const { isOpen: isLoginModalOpen, onOpen: onLoginModalOpen, onOpenChange: onLoginModalChange } = useDisclosure();
+  const {
+    isOpen: isValidationModalOpen,
+    onOpen: onValidationModalOpen,
+    onOpenChange: onValidationModalChange,
+  } = useDisclosure();
+  const {
+    isOpen: isResetModalOpen,
+    onOpen: onResetModalOpen,
+    onOpenChange: onResetModalChange,
+  } = useDisclosure();
+  const {
+    isOpen: isJsonErrorModalOpen,
+    onOpen: onJsonErrorModalOpen,
+    onOpenChange: onJsonErrorModalChange,
+  } = useDisclosure();
+  const {
+    isOpen: isTaskConfirmModalOpen,
+    onOpen: onTaskConfirmModalOpen,
+    onOpenChange: onTaskConfirmModalChange,
+  } = useDisclosure();
+  const {
+    isOpen: isLoginModalOpen,
+    onOpen: onLoginModalOpen,
+    onOpenChange: onLoginModalChange,
+  } = useDisclosure();
   const [validationMessage, setValidationMessage] = useState<string>("");
   const [jsonErrorMessage, setJsonErrorMessage] = useState<string>("");
-  const [taskCountInfo, setTaskCountInfo] = useState<{ count: number; formattedCount: string; taskData: any } | null>(null);
+  const [taskCountInfo, setTaskCountInfo] = useState<{
+    count: number;
+    formattedCount: string;
+    taskData: any;
+  } | null>(null);
 
   // 获取认证状态
   const { user, isLoading: authLoading } = useAuth();
@@ -138,7 +167,7 @@ export default function TestPage() {
   // 获取下一个变量ID
   const getNextVariableId = () => {
     const nextId = variableIdCounter;
-    setVariableIdCounter(prevId => prevId + 1);
+    setVariableIdCounter((prevId) => prevId + 1);
     return `${nextId}`;
   };
 
@@ -152,8 +181,8 @@ export default function TestPage() {
       value: "1girl, cute",
       weight: 1.0,
       is_variable: false,
-      selected: false
-    }
+      selected: false,
+    },
   ]);
 
   // 是否启用批量编辑模式
@@ -163,52 +192,52 @@ export default function TestPage() {
 
   // 任务参数
   const [ratio, setRatio] = useState<TaskParameter>({
-    type: 'ratio',
-    value: '1:1',
+    type: "ratio",
+    value: "1:1",
     is_variable: false,
-    format: 'string'
+    format: "string",
   });
 
   const [seed, setSeed] = useState<TaskParameter>({
-    type: 'seed',
+    type: "seed",
     value: 1,
     is_variable: false,
-    format: 'int'
+    format: "int",
   });
 
   const [userPolish, setUserPolish] = useState<TaskParameter>({
-    type: 'use_polish',
+    type: "use_polish",
     value: false,
     is_variable: false,
-    format: 'bool'
+    format: "bool",
   });
 
   const [isLumina, setIsLumina] = useState<TaskParameter>({
-    type: 'is_lumina',
+    type: "is_lumina",
     value: false,
     is_variable: false,
-    format: 'bool'
+    format: "bool",
   });
 
   const [luminaModelName, setLuminaModelName] = useState<TaskParameter>({
-    type: 'lumina_model_name',
+    type: "lumina_model_name",
     value: null,
     is_variable: false,
-    format: 'string'
+    format: "string",
   });
 
   const [luminaCfg, setLuminaCfg] = useState<TaskParameter>({
-    type: 'lumina_cfg',
+    type: "lumina_cfg",
     value: 5.5,
     is_variable: false,
-    format: 'float'
+    format: "float",
   });
 
   const [luminaStep, setLuminaStep] = useState<TaskParameter>({
-    type: 'lumina_step',
+    type: "lumina_step",
     value: 30,
     is_variable: false,
-    format: 'int'
+    format: "int",
   });
 
   const [priority, setPriority] = useState<number>(1);
@@ -221,7 +250,7 @@ export default function TestPage() {
   const [jsonError, setJsonError] = useState<string | null>(null);
 
   // 本地存储键名
-  const STORAGE_KEY = 'model_test_config';
+  const STORAGE_KEY = "model_test_config";
 
   // 保存配置到本地存储
   const saveConfigToLocalStorage = () => {
@@ -240,13 +269,13 @@ export default function TestPage() {
         luminaCfg,
         luminaStep,
         priority,
-        variableIdCounter
+        variableIdCounter,
       };
 
       // 防止循环引用
       const configStr = JSON.stringify(config, (key, value) => {
         // 避免序列化函数或循环引用
-        if (typeof value === 'function') {
+        if (typeof value === "function") {
           return undefined;
         }
         return value;
@@ -285,16 +314,22 @@ export default function TestPage() {
           weight: prompt.weight || 1.0,
           is_variable: !!prompt.is_variable,
           selected: false, // 始终重置选中状态
-          ...(prompt.is_variable ? {
-            variable_name: prompt.variable_name || "",
-            variable_id: prompt.variable_id || getNextVariableId(),
-            variable_values: Array.isArray(prompt.variable_values) ? prompt.variable_values : []
-          } : {}),
-          ...(prompt.type === 'oc_vtoken_adaptor' || prompt.type === 'elementum' ? {
-            img_url: prompt.img_url || '',
-            uuid: prompt.uuid || '',
-            name: prompt.name || ''
-          } : {})
+          ...(prompt.is_variable
+            ? {
+                variable_name: prompt.variable_name || "",
+                variable_id: prompt.variable_id || getNextVariableId(),
+                variable_values: Array.isArray(prompt.variable_values)
+                  ? prompt.variable_values
+                  : [],
+              }
+            : {}),
+          ...(prompt.type === "oc_vtoken_adaptor" || prompt.type === "elementum"
+            ? {
+                img_url: prompt.img_url || "",
+                uuid: prompt.uuid || "",
+                name: prompt.name || "",
+              }
+            : {}),
         }));
         setPrompts(validPrompts);
       }
@@ -307,7 +342,7 @@ export default function TestPage() {
       if (config.luminaCfg) setLuminaCfg(config.luminaCfg);
       if (config.luminaStep) setLuminaStep(config.luminaStep);
       if (config.priority !== undefined) setPriority(config.priority);
-      if (config.variableIdCounter && typeof config.variableIdCounter === 'number') {
+      if (config.variableIdCounter && typeof config.variableIdCounter === "number") {
         setVariableIdCounter(config.variableIdCounter);
       }
 
@@ -322,7 +357,7 @@ export default function TestPage() {
     // 确保代码只在浏览器端执行
     if (isClient) {
       // 先检查是否有复用的任务
-      const reusedTaskStr = localStorage.getItem('reusedTask');
+      const reusedTaskStr = localStorage.getItem("reusedTask");
       if (reusedTaskStr) {
         try {
           const reusedTaskData = JSON.parse(reusedTaskStr);
@@ -330,7 +365,7 @@ export default function TestPage() {
           // 不立即应用，等待用户确认
         } catch (error) {
           console.error("解析复用任务数据失败:", error);
-          localStorage.removeItem('reusedTask');
+          localStorage.removeItem("reusedTask");
         }
       } else {
         // 如果没有复用任务，加载本地保存的配置
@@ -361,7 +396,7 @@ export default function TestPage() {
     luminaCfg,
     luminaStep,
     priority,
-    variableIdCounter
+    variableIdCounter,
   ]);
 
   // 清理任务参数数据 - 从useEffect中移出到组件内作为独立函数
@@ -385,10 +420,10 @@ export default function TestPage() {
   // 更新JSON数据
   useEffect(() => {
     // 清理提示词数据，根据变量状态保留必要字段
-    const cleanedPrompts = prompts.map(prompt => {
+    const cleanedPrompts = prompts.map((prompt) => {
       const cleanPrompt: any = {
         type: prompt.type,
-        is_variable: prompt.is_variable
+        is_variable: prompt.is_variable,
       };
 
       if (prompt.is_variable) {
@@ -405,7 +440,7 @@ export default function TestPage() {
         cleanPrompt.weight = prompt.weight;
 
         // 对于角色和元素类型，还需保留额外字段
-        if (prompt.type === 'oc_vtoken_adaptor' || prompt.type === 'elementum') {
+        if (prompt.type === "oc_vtoken_adaptor" || prompt.type === "elementum") {
           cleanPrompt.uuid = prompt.uuid;
           cleanPrompt.img_url = prompt.img_url;
           cleanPrompt.name = prompt.name;
@@ -425,7 +460,7 @@ export default function TestPage() {
       lumina_model_name: cleanParameter(luminaModelName),
       lumina_cfg: cleanParameter(luminaCfg),
       lumina_step: cleanParameter(luminaStep),
-      priority
+      priority,
     };
 
     const formattedJson = JSON.stringify(data, null, 2);
@@ -441,7 +476,7 @@ export default function TestPage() {
     luminaModelName,
     luminaCfg,
     luminaStep,
-    priority
+    priority,
   ]);
 
   // 添加提示词
@@ -453,8 +488,8 @@ export default function TestPage() {
         value: "",
         weight: 1.0,
         is_variable: false,
-        selected: false
-      }
+        selected: false,
+      },
     ]);
   };
 
@@ -463,7 +498,7 @@ export default function TestPage() {
     const newPrompts = [...prompts];
 
     // 如果是切换变量状态
-    if (field === 'is_variable') {
+    if (field === "is_variable") {
       if (value === true) {
         // 切换为变量，但保留必需的字段，清空非必需字段
         const promptType = newPrompts[index].type;
@@ -474,14 +509,14 @@ export default function TestPage() {
         let defaultVariableValue: VariableValueType = {
           type: promptType,
           value: currentValue,
-          weight: currentWeight
+          weight: currentWeight,
         };
 
         // 对于角色和元素类型，添加额外必要字段
-        if (promptType === 'oc_vtoken_adaptor' || promptType === 'elementum') {
-          defaultVariableValue.uuid = newPrompts[index].uuid || '';
-          defaultVariableValue.img_url = newPrompts[index].img_url || '';
-          defaultVariableValue.name = newPrompts[index].name || '';
+        if (promptType === "oc_vtoken_adaptor" || promptType === "elementum") {
+          defaultVariableValue.uuid = newPrompts[index].uuid || "";
+          defaultVariableValue.img_url = newPrompts[index].img_url || "";
+          defaultVariableValue.name = newPrompts[index].name || "";
         }
 
         const newPrompt: Prompt = {
@@ -493,7 +528,7 @@ export default function TestPage() {
           // 以下字段是Prompt类型所必需的
           value: "",
           weight: 1.0,
-          selected: newPrompts[index].selected || false
+          selected: newPrompts[index].selected || false,
         };
 
         // 清除可选的vtoken字段
@@ -508,31 +543,31 @@ export default function TestPage() {
         // 尝试从变量值列表中获取第一个值
         const firstVariableValue = newPrompts[index].variable_values?.[0] || {
           type: promptType,
-          value: '',
+          value: "",
           weight: 1.0,
-          uuid: '',
-          img_url: '',
-          name: ''
+          uuid: "",
+          img_url: "",
+          name: "",
         };
 
-        if (promptType === 'oc_vtoken_adaptor' || promptType === 'elementum') {
+        if (promptType === "oc_vtoken_adaptor" || promptType === "elementum") {
           newPrompts[index] = {
             type: promptType,
             is_variable: false,
-            value: firstVariableValue.value || '',
+            value: firstVariableValue.value || "",
             weight: firstVariableValue.weight || 1.0,
-            img_url: firstVariableValue.img_url || '',
-            uuid: firstVariableValue.uuid || '',
-            name: firstVariableValue.name || '',
-            selected: false
+            img_url: firstVariableValue.img_url || "",
+            uuid: firstVariableValue.uuid || "",
+            name: firstVariableValue.name || "",
+            selected: false,
           };
         } else {
           newPrompts[index] = {
             type: promptType,
             is_variable: false,
-            value: firstVariableValue.value || '',
+            value: firstVariableValue.value || "",
             weight: firstVariableValue.weight || 1.0,
-            selected: false
+            selected: false,
           };
         }
 
@@ -541,7 +576,7 @@ export default function TestPage() {
         delete (newPrompts[index] as any).variable_id;
         delete (newPrompts[index] as any).variable_values;
       }
-    } else if (field === 'type') {
+    } else if (field === "type") {
       // 如果是切换类型
       let updatedPrompt: Prompt;
 
@@ -555,23 +590,23 @@ export default function TestPage() {
           // 以下字段是Prompt类型所必需的
           value: "",
           weight: 1.0,
-          selected: newPrompts[index].selected || false
+          selected: newPrompts[index].selected || false,
         };
 
         // 更新变量值列表中的类型
         if (newPrompts[index].variable_values && newPrompts[index].variable_values.length > 0) {
-          const updatedValues = newPrompts[index].variable_values.map(val => {
+          const updatedValues = newPrompts[index].variable_values.map((val) => {
             const newVal: VariableValueType = {
               type: value,
-              value: val.value || '',
-              weight: val.weight || 1.0
+              value: val.value || "",
+              weight: val.weight || 1.0,
             };
 
             // 对于角色和元素类型，确保有必要字段
-            if (value === 'oc_vtoken_adaptor' || value === 'elementum') {
-              newVal.uuid = val.uuid || '';
-              newVal.img_url = val.img_url || '';
-              newVal.name = val.name || '';
+            if (value === "oc_vtoken_adaptor" || value === "elementum") {
+              newVal.uuid = val.uuid || "";
+              newVal.img_url = val.img_url || "";
+              newVal.name = val.name || "";
             }
 
             return newVal;
@@ -581,15 +616,15 @@ export default function TestPage() {
           // 如果没有变量值列表，创建一个空的带默认值
           const defaultValue: VariableValueType = {
             type: value,
-            value: '',
-            weight: 1.0
+            value: "",
+            weight: 1.0,
           };
 
           // 对于角色和元素类型，添加额外必要字段
-          if (value === 'oc_vtoken_adaptor' || value === 'elementum') {
-            defaultValue.uuid = '';
-            defaultValue.img_url = '';
-            defaultValue.name = '';
+          if (value === "oc_vtoken_adaptor" || value === "elementum") {
+            defaultValue.uuid = "";
+            defaultValue.img_url = "";
+            defaultValue.name = "";
           }
 
           updatedPrompt.variable_values = [defaultValue];
@@ -604,16 +639,16 @@ export default function TestPage() {
         updatedPrompt = {
           type: value,
           is_variable: false,
-          value: '',
+          value: "",
           weight: 1.0,
-          selected: newPrompts[index].selected || false
+          selected: newPrompts[index].selected || false,
         };
 
         // 如果切换到角色或元素类型，添加必要字段
-        if (value === 'oc_vtoken_adaptor' || value === 'elementum') {
-          updatedPrompt.img_url = '';
-          updatedPrompt.uuid = '';
-          updatedPrompt.name = '';
+        if (value === "oc_vtoken_adaptor" || value === "elementum") {
+          updatedPrompt.img_url = "";
+          updatedPrompt.uuid = "";
+          updatedPrompt.name = "";
         } else {
           // 如果从角色/元素切换到文本，删除这些字段
           delete (updatedPrompt as any).img_url;
@@ -628,14 +663,14 @@ export default function TestPage() {
       }
 
       newPrompts[index] = updatedPrompt;
-    } else if (field === 'variable_values') {
+    } else if (field === "variable_values") {
       // 直接更新变量值列表
       newPrompts[index].variable_values = value;
     } else {
       // 其他字段的正常更新
       newPrompts[index] = {
         ...newPrompts[index],
-        [field]: value
+        [field]: value,
       };
     }
 
@@ -652,18 +687,20 @@ export default function TestPage() {
     const newPrompts = [...prompts];
     newPrompts[index].selected = !newPrompts[index].selected;
     setPrompts(newPrompts);
-    setSelectedCount(newPrompts.filter(p => p.selected).length);
+    setSelectedCount(newPrompts.filter((p) => p.selected).length);
   };
 
   // 移动提示词位置（上移/下移）
-  const movePrompt = (index: number, direction: 'up' | 'down') => {
-    if ((direction === 'up' && index === 0) ||
-      (direction === 'down' && index === prompts.length - 1)) {
+  const movePrompt = (index: number, direction: "up" | "down") => {
+    if (
+      (direction === "up" && index === 0) ||
+      (direction === "down" && index === prompts.length - 1)
+    ) {
       return; // 已在顶部或底部
     }
 
     const newPrompts = [...prompts];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
     const temp = newPrompts[index];
     newPrompts[index] = newPrompts[targetIndex];
     newPrompts[targetIndex] = temp;
@@ -681,15 +718,13 @@ export default function TestPage() {
 
   // 批量删除选中的提示词
   const batchDeletePrompts = () => {
-    setPrompts(prompts.filter(prompt => !prompt.selected));
+    setPrompts(prompts.filter((prompt) => !prompt.selected));
     setSelectedCount(0);
   };
 
   // 批量修改选中提示词的类型
   const batchUpdateType = (type: string) => {
-    setPrompts(prompts.map(prompt =>
-      prompt.selected ? { ...prompt, type } : prompt
-    ));
+    setPrompts(prompts.map((prompt) => (prompt.selected ? { ...prompt, type } : prompt)));
   };
 
   // 处理JSON编辑
@@ -719,7 +754,9 @@ export default function TestPage() {
       toast.success("JSON配置应用成功");
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "JSON格式错误，请检查语法";
-      setJsonErrorMessage(`JSON解析失败：\n\n${errorMessage}\n\n请检查JSON格式是否正确，注意：\n• 字符串需要用双引号包围\n• 对象和数组的语法要正确\n• 不能有多余的逗号\n• 括号要匹配`);
+      setJsonErrorMessage(
+        `JSON解析失败：\n\n${errorMessage}\n\n请检查JSON格式是否正确，注意：\n• 字符串需要用双引号包围\n• 对象和数组的语法要正确\n• 不能有多余的逗号\n• 括号要匹配`
+      );
       onJsonErrorModalOpen();
     }
   };
@@ -745,7 +782,7 @@ export default function TestPage() {
     return {
       ...parameter,
       variable_values: newValues,
-      value: updatedValue  // 同步更新value
+      value: updatedValue, // 同步更新value
     };
   };
 
@@ -755,41 +792,53 @@ export default function TestPage() {
 
     // 检查提示词变量
     prompts.forEach((prompt, index) => {
-      if (prompt.is_variable && (!prompt.variable_name || prompt.variable_name.trim() === '')) {
+      if (prompt.is_variable && (!prompt.variable_name || prompt.variable_name.trim() === "")) {
         missingVariableNames.push(`提示词 ${index + 1}`);
       }
     });
 
     // 检查比例参数
-    if (ratio.is_variable && (!ratio.variable_name || ratio.variable_name.trim() === '')) {
-      missingVariableNames.push('比例');
+    if (ratio.is_variable && (!ratio.variable_name || ratio.variable_name.trim() === "")) {
+      missingVariableNames.push("比例");
     }
 
     // 检查种子参数
-    if (seed.is_variable && (!seed.variable_name || seed.variable_name.trim() === '')) {
-      missingVariableNames.push('种子');
+    if (seed.is_variable && (!seed.variable_name || seed.variable_name.trim() === "")) {
+      missingVariableNames.push("种子");
     }
 
     // 检查润色参数
-    if (userPolish.is_variable && (!userPolish.variable_name || userPolish.variable_name.trim() === '')) {
-      missingVariableNames.push('润色');
+    if (
+      userPolish.is_variable &&
+      (!userPolish.variable_name || userPolish.variable_name.trim() === "")
+    ) {
+      missingVariableNames.push("润色");
     }
 
     // 检查lumina相关参数
-    if (isLumina.is_variable && (!isLumina.variable_name || isLumina.variable_name.trim() === '')) {
-      missingVariableNames.push('使用Lumina');
+    if (isLumina.is_variable && (!isLumina.variable_name || isLumina.variable_name.trim() === "")) {
+      missingVariableNames.push("使用Lumina");
     }
 
-    if (luminaModelName.is_variable && (!luminaModelName.variable_name || luminaModelName.variable_name.trim() === '')) {
-      missingVariableNames.push('Lumina模型名称');
+    if (
+      luminaModelName.is_variable &&
+      (!luminaModelName.variable_name || luminaModelName.variable_name.trim() === "")
+    ) {
+      missingVariableNames.push("Lumina模型名称");
     }
 
-    if (luminaCfg.is_variable && (!luminaCfg.variable_name || luminaCfg.variable_name.trim() === '')) {
-      missingVariableNames.push('Lumina配置');
+    if (
+      luminaCfg.is_variable &&
+      (!luminaCfg.variable_name || luminaCfg.variable_name.trim() === "")
+    ) {
+      missingVariableNames.push("Lumina配置");
     }
 
-    if (luminaStep.is_variable && (!luminaStep.variable_name || luminaStep.variable_name.trim() === '')) {
-      missingVariableNames.push('Lumina步数');
+    if (
+      luminaStep.is_variable &&
+      (!luminaStep.variable_name || luminaStep.variable_name.trim() === "")
+    ) {
+      missingVariableNames.push("Lumina步数");
     }
 
     return missingVariableNames;
@@ -809,7 +858,7 @@ export default function TestPage() {
 
     // 如果有缺失的变量名，显示警告
     if (missingVariableNames.length > 0) {
-      const missingNamesStr = missingVariableNames.join('、');
+      const missingNamesStr = missingVariableNames.join("、");
       setValidationMessage(`以下变量缺少变量名，请补充后再提交：\n${missingNamesStr}`);
       onValidationModalOpen();
       return;
@@ -829,17 +878,17 @@ export default function TestPage() {
         // 确保批量大小存在
         if (!taskData.batch_size) {
           taskData.batch_size = {
-            type: 'batch_size',
+            type: "batch_size",
             value: 1,
             is_variable: false,
-            format: 'int'
+            format: "int",
           };
         }
       } catch (error) {
         // 如果解析失败，则使用表单状态构建数据
         taskData = {
           name,
-          prompts: prompts.map(prompt => ({
+          prompts: prompts.map((prompt) => ({
             type: prompt.type,
             value: prompt.value,
             weight: prompt.weight,
@@ -849,7 +898,7 @@ export default function TestPage() {
             variable_values: prompt.variable_values,
             img_url: prompt.img_url,
             uuid: prompt.uuid,
-            name: prompt.name
+            name: prompt.name,
           })),
           ratio: cleanParameter(ratio),
           seed: cleanParameter(seed),
@@ -860,11 +909,11 @@ export default function TestPage() {
           lumina_step: cleanParameter(luminaStep),
           priority: priority,
           batch_size: {
-            type: 'batch_size',
+            type: "batch_size",
             value: 1,
             is_variable: false,
-            format: 'int'
-          }
+            format: "int",
+          },
         };
       }
 
@@ -873,7 +922,9 @@ export default function TestPage() {
 
       // 检查是否超过5万限制
       if (isTaskCountExceeded(taskCount)) {
-        setValidationMessage(`任务数量超过限制！\n\n即将生成 ${formatTaskCount(taskCount)} 个任务，但系统限制最多生成 50,000 个任务。\n\n请减少变量值的数量或调整任务参数。`);
+        setValidationMessage(
+          `任务数量超过限制！\n\n即将生成 ${formatTaskCount(taskCount)} 个任务，但系统限制最多生成 50,000 个任务。\n\n请减少变量值的数量或调整任务参数。`
+        );
         onValidationModalOpen();
         return;
       }
@@ -882,15 +933,14 @@ export default function TestPage() {
       setTaskCountInfo({
         count: taskCount,
         formattedCount: formatTaskCount(taskCount),
-        taskData: taskData
+        taskData: taskData,
       });
       onTaskConfirmModalOpen();
-
     } catch (error) {
-      console.error('准备提交数据时出错', error);
+      console.error("准备提交数据时出错", error);
       setSubmitResult({
         success: false,
-        message: '准备提交数据时出错，请检查高级模式下的JSON格式'
+        message: "准备提交数据时出错，请检查高级模式下的JSON格式",
       });
     }
   };
@@ -907,26 +957,26 @@ export default function TestPage() {
       method: "POST",
       body: taskCountInfo.taskData,
     })
-      .then(response => {
-        console.log('任务提交成功', response);
+      .then((response) => {
+        console.log("任务提交成功", response);
         // 设置成功状态
         setSubmitResult({
           success: true,
           taskId: response.data.task_id,
-          message: response.message || '任务提交成功'
+          message: response.message || "任务提交成功",
         });
         // 保存当前配置到本地存储
         saveConfigToLocalStorage();
         toast.success(`任务提交成功！将生成 ${taskCountInfo.formattedCount} 个任务`);
       })
-      .catch(error => {
-        console.error('任务提交失败', error);
+      .catch((error) => {
+        console.error("任务提交失败", error);
         // 设置失败状态
         setSubmitResult({
           success: false,
-          message: error.message || '任务提交失败，请稍后重试'
+          message: error.message || "任务提交失败，请稍后重试",
         });
-        toast.error('任务提交失败');
+        toast.error("任务提交失败");
       })
       .finally(() => {
         // 恢复提交状态
@@ -939,7 +989,11 @@ export default function TestPage() {
   };
 
   // 完整更新参数变量状态
-  const updateParameterVariableStatus = (parameter: TaskParameter, isVariable: boolean, name: string = "") => {
+  const updateParameterVariableStatus = (
+    parameter: TaskParameter,
+    isVariable: boolean,
+    name: string = ""
+  ) => {
     if (isVariable) {
       // 切换为变量，使用固定变量名
       return {
@@ -947,7 +1001,7 @@ export default function TestPage() {
         is_variable: true,
         variable_name: name, // 使用传入的固定名称
         variable_id: getNextVariableId(),
-        variable_values: [parameter.value]
+        variable_values: [parameter.value],
       };
     } else {
       // 切换回非变量，优先使用变量列表的第一个值
@@ -964,18 +1018,23 @@ export default function TestPage() {
         value: newValue,
         variable_name: undefined,
         variable_id: undefined,
-        variable_values: undefined
+        variable_values: undefined,
       };
     }
   };
 
   // 添加参数变量值
   const addParameterVariableValue = (parameter: TaskParameter, value: any = null) => {
-    const defaultValue = value !== null ? value : (
-      parameter.format === 'bool' ? false :
-        parameter.format === 'float' ? 0.0 :
-          parameter.format === 'int' ? 0 : ''
-    );
+    const defaultValue =
+      value !== null
+        ? value
+        : parameter.format === "bool"
+          ? false
+          : parameter.format === "float"
+            ? 0.0
+            : parameter.format === "int"
+              ? 0
+              : "";
 
     const newValues = parameter.variable_values ? [...parameter.variable_values] : [];
     newValues.push(defaultValue);
@@ -996,15 +1055,21 @@ export default function TestPage() {
   };
 
   // 移动参数变量值位置
-  const moveParameterVariableValue = (parameter: TaskParameter, index: number, direction: 'up' | 'down') => {
-    if (!parameter.variable_values ||
-      (direction === 'up' && index === 0) ||
-      (direction === 'down' && index === parameter.variable_values.length - 1)) {
+  const moveParameterVariableValue = (
+    parameter: TaskParameter,
+    index: number,
+    direction: "up" | "down"
+  ) => {
+    if (
+      !parameter.variable_values ||
+      (direction === "up" && index === 0) ||
+      (direction === "down" && index === parameter.variable_values.length - 1)
+    ) {
       return parameter;
     }
 
     const newValues = [...parameter.variable_values];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
     const temp = newValues[index];
     newValues[index] = newValues[targetIndex];
     newValues[targetIndex] = temp;
@@ -1039,63 +1104,65 @@ export default function TestPage() {
     // 生成带时间戳的任务名称
     const now = new Date();
     const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hour = String(now.getHours()).padStart(2, '0');
-    const minute = String(now.getMinutes()).padStart(2, '0');
-    const second = String(now.getSeconds()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const hour = String(now.getHours()).padStart(2, "0");
+    const minute = String(now.getMinutes()).padStart(2, "0");
+    const second = String(now.getSeconds()).padStart(2, "0");
     const timestampedName = `未命名任务-${year}-${month}-${day}-${hour}-${minute}-${second}`;
 
     // 重置所有状态到初始值
     setName(timestampedName);
-    setPrompts([{
-      type: "freetext",
-      value: "1girl, cute",
-      weight: 1.0,
-      is_variable: false,
-      selected: false
-    }]);
+    setPrompts([
+      {
+        type: "freetext",
+        value: "1girl, cute",
+        weight: 1.0,
+        is_variable: false,
+        selected: false,
+      },
+    ]);
     setRatio({
-      type: 'ratio',
-      value: '1:1',
+      type: "ratio",
+      value: "1:1",
       is_variable: false,
-      format: 'string'
+      format: "string",
     });
     setSeed({
-      type: 'seed',
+      type: "seed",
       value: 1,
       is_variable: false,
-      format: 'int'
+      format: "int",
     });
     setUserPolish({
-      type: 'use_polish',
+      type: "use_polish",
       value: false,
       is_variable: false,
-      format: 'bool'
+      format: "bool",
     });
     setIsLumina({
-      type: 'is_lumina',
+      type: "is_lumina",
       value: false,
       is_variable: false,
-      format: 'bool'
+      format: "bool",
     });
     setLuminaModelName({
-      type: 'lumina_model_name',
+      type: "lumina_model_name",
       value: null,
       is_variable: false,
-      format: 'string'
+      format: "string",
     });
     setLuminaCfg({
-      type: 'lumina_cfg',
+      type: "lumina_cfg",
       value: 5.5,
       is_variable: false,
-      format: 'float'
+      format: "float",
     });
     setLuminaStep({
-      type: 'lumina_step',
+      type: "lumina_step",
       value: 30,
       is_variable: false,
-      format: 'int'
+      format: "int",
     });
     setPriority(1);
     setVariableIdCounter(1);
@@ -1126,16 +1193,16 @@ export default function TestPage() {
         luminaModelName,
         luminaCfg,
         luminaStep,
-        priority
+        priority,
       };
       const configStr = JSON.stringify(config, null, 2);
-      const blob = new Blob([configStr], { type: 'application/json' });
+      const blob = new Blob([configStr], { type: "application/json" });
       const url = URL.createObjectURL(blob);
 
       // 创建下载链接
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `${name || 'model_test_config'}.json`;
+      a.download = `${name || "model_test_config"}.json`;
       document.body.appendChild(a);
       a.click();
 
@@ -1157,9 +1224,9 @@ export default function TestPage() {
 
     try {
       // 创建文件输入元素
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.json';
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".json";
 
       input.onchange = (e) => {
         const file = (e.target as HTMLInputElement).files?.[0];
@@ -1209,10 +1276,12 @@ export default function TestPage() {
 
       // 更新提示词
       if (taskDetail.prompts && Array.isArray(taskDetail.prompts)) {
-        setPrompts(taskDetail.prompts.map((p: any) => ({
-          ...p,
-          selected: false // 重置选中状态
-        })));
+        setPrompts(
+          taskDetail.prompts.map((p: any) => ({
+            ...p,
+            selected: false, // 重置选中状态
+          }))
+        );
       }
 
       // 更新参数
@@ -1226,7 +1295,7 @@ export default function TestPage() {
       if (taskDetail.priority !== undefined) setPriority(taskDetail.priority);
 
       // 清除复用任务数据
-      localStorage.removeItem('reusedTask');
+      localStorage.removeItem("reusedTask");
       setReusedTask(null);
 
       // 显示成功提示
@@ -1239,7 +1308,7 @@ export default function TestPage() {
 
   // 忽略复用任务
   const ignoreReusedTask = () => {
-    localStorage.removeItem('reusedTask');
+    localStorage.removeItem("reusedTask");
     setReusedTask(null);
     // 加载本地保存的配置
     loadConfigFromLocalStorage();
@@ -1247,7 +1316,9 @@ export default function TestPage() {
 
   return (
     <>
-      <style jsx global>{hideScrollbarStyle}</style>
+      <style jsx global>
+        {hideScrollbarStyle}
+      </style>
       {/* 左侧参数设置区域 - 增大与分割线的安全距离 */}
       <div className="fixed left-[320px] top-0 bottom-0 w-[calc(100%-330px)] xl:w-[calc(67%-330px)] 2xl:w-[calc(75%-330px)] min-w-[600px] overflow-hidden flex flex-col p-4">
         <div className="w-full flex-shrink-0">
@@ -1257,7 +1328,7 @@ export default function TestPage() {
         <div className="w-full flex-grow overflow-hidden">
           <div
             className="overflow-y-auto hide-scrollbar h-full pb-24"
-            style={{ maxHeight: 'calc(100vh - 5rem)' }}
+            style={{ maxHeight: "calc(100vh - 5rem)" }}
           >
             <div className="space-y-6 pb-6">
               {/* 任务名称 */}
@@ -1318,9 +1389,13 @@ export default function TestPage() {
                   <div
                     key={index}
                     className={`flex flex-col border rounded-md overflow-hidden
-                      ${batchEditMode && prompt.selected ? 'border-primary bg-primary-50 dark:bg-primary-50/20' :
-                        prompt.is_variable ? 'border-primary-200 bg-primary-50 dark:border-primary-300/30 dark:bg-primary-50/20' :
-                          'border-default-200 dark:border-default-100'}`}
+                      ${
+                        batchEditMode && prompt.selected
+                          ? "border-primary bg-primary-50 dark:bg-primary-50/20"
+                          : prompt.is_variable
+                            ? "border-primary-200 bg-primary-50 dark:border-primary-300/30 dark:bg-primary-50/20"
+                            : "border-default-200 dark:border-default-100"
+                      }`}
                   >
                     {/* 提示词主体部分 */}
                     <div className="flex items-center gap-2 p-3 min-h-[60px]">
@@ -1341,13 +1416,13 @@ export default function TestPage() {
                           aria-label="提示词类型"
                           selectedKey={prompt.type}
                           onSelectionChange={(key) => {
-                            updatePrompt(index, 'type', key.toString());
+                            updatePrompt(index, "type", key.toString());
                           }}
                           classNames={{
                             base: "w-full",
                             tabList: "gap-1 w-full",
                             tab: "h-7 px-2 py-0",
-                            cursor: "h-7"
+                            cursor: "h-7",
                           }}
                         >
                           <Tab key="freetext" title="文本" />
@@ -1361,7 +1436,7 @@ export default function TestPage() {
                         <Switch
                           size="sm"
                           isSelected={prompt.is_variable}
-                          onValueChange={(checked) => updatePrompt(index, 'is_variable', checked)}
+                          onValueChange={(checked) => updatePrompt(index, "is_variable", checked)}
                           aria-label={`将提示词 ${index + 1} 设为变量`}
                         />
                         <span className="text-xs text-default-500">变量</span>
@@ -1377,10 +1452,10 @@ export default function TestPage() {
                                 size="sm"
                                 placeholder="输入提示词内容"
                                 value={prompt.value}
-                                onChange={(e) => updatePrompt(index, 'value', e.target.value)}
+                                onChange={(e) => updatePrompt(index, "value", e.target.value)}
                                 className="w-full"
                               />
-                            ) :
+                            ) : (
                               <VTokenSelector
                                 name={prompt.name}
                                 type={PROMPT_TYPE_TO_VTOKEN_TYPE[prompt.type]}
@@ -1388,13 +1463,13 @@ export default function TestPage() {
                                 onChange={(value) => {
                                   // 如果用户清除了选择（value为空），则清除所有相关字段
                                   if (!value) {
-                                    updatePrompt(index, 'name', '');
-                                    updatePrompt(index, 'uuid', '');
-                                    updatePrompt(index, 'img_url', '');
-                                    updatePrompt(index, 'value', '');
+                                    updatePrompt(index, "name", "");
+                                    updatePrompt(index, "uuid", "");
+                                    updatePrompt(index, "img_url", "");
+                                    updatePrompt(index, "value", "");
                                   } else {
                                     // 仅更新名称，这可能发生在用户直接编辑名称时
-                                    updatePrompt(index, 'name', value);
+                                    updatePrompt(index, "name", value);
                                   }
                                 }}
                                 onSelectItem={(item: SearchSelectItem) => {
@@ -1404,7 +1479,7 @@ export default function TestPage() {
                                     name: item.name,
                                     uuid: item.uuid,
                                     img_url: item.header_img,
-                                    value: item.uuid // 将value设为uuid而不是name
+                                    value: item.uuid, // 将value设为uuid而不是name
                                   };
 
                                   const newPrompts = [...prompts];
@@ -1412,7 +1487,7 @@ export default function TestPage() {
                                   setPrompts(newPrompts);
                                 }}
                               />
-                            }
+                            )}
                           </div>
 
                           <div className="w-20 flex-shrink-0">
@@ -1424,7 +1499,7 @@ export default function TestPage() {
                               onChange={(e) => {
                                 const value = parseFloat(e.target.value);
                                 if (!isNaN(value) && value >= 0.5 && value <= 2) {
-                                  updatePrompt(index, 'weight', value);
+                                  updatePrompt(index, "weight", value);
                                 }
                               }}
                               className="w-full"
@@ -1441,8 +1516,8 @@ export default function TestPage() {
                             <Input
                               size="sm"
                               placeholder="输入变量名称"
-                              value={prompt.variable_name || ''}
-                              onChange={(e) => updatePrompt(index, 'variable_name', e.target.value)}
+                              value={prompt.variable_name || ""}
+                              onChange={(e) => updatePrompt(index, "variable_name", e.target.value)}
                               className="w-full"
                             />
                           </div>
@@ -1456,7 +1531,7 @@ export default function TestPage() {
                           variant="light"
                           isIconOnly
                           isDisabled={index === 0}
-                          onPress={() => movePrompt(index, 'up')}
+                          onPress={() => movePrompt(index, "up")}
                           aria-label={`上移提示词 ${index + 1}`}
                         >
                           <Icon icon="solar:alt-arrow-up-linear" />
@@ -1466,7 +1541,7 @@ export default function TestPage() {
                           variant="light"
                           isIconOnly
                           isDisabled={index === prompts.length - 1}
-                          onPress={() => movePrompt(index, 'down')}
+                          onPress={() => movePrompt(index, "down")}
                           aria-label={`下移提示词 ${index + 1}`}
                         >
                           <Icon icon="solar:alt-arrow-down-linear" />
@@ -1508,21 +1583,27 @@ export default function TestPage() {
                               const promptType = prompt.type;
                               let newVariableValue: VariableValueType = {
                                 type: promptType,
-                                value: '',
-                                weight: 1.0
+                                value: "",
+                                weight: 1.0,
                               };
 
                               // 对于角色和元素类型，添加额外必要字段
-                              if (promptType === 'oc_vtoken_adaptor' || promptType === 'elementum') {
-                                newVariableValue.uuid = '';
-                                newVariableValue.img_url = '';
-                                newVariableValue.name = '';
+                              if (
+                                promptType === "oc_vtoken_adaptor" ||
+                                promptType === "elementum"
+                              ) {
+                                newVariableValue.uuid = "";
+                                newVariableValue.img_url = "";
+                                newVariableValue.name = "";
                               }
 
-                              const newVariableValues = [...(prompt.variable_values || []), newVariableValue];
-                              updatePrompt(index, 'variable_values', newVariableValues);
+                              const newVariableValues = [
+                                ...(prompt.variable_values || []),
+                                newVariableValue,
+                              ];
+                              updatePrompt(index, "variable_values", newVariableValues);
                             }}
-                            aria-label={`为变量 ${prompt.variable_name || '未命名变量'} 添加值`}
+                            aria-label={`为变量 ${prompt.variable_name || "未命名变量"} 添加值`}
                           >
                             添加值
                           </Button>
@@ -1530,47 +1611,50 @@ export default function TestPage() {
 
                         <div className="space-y-2">
                           {(prompt.variable_values || []).map((varValue, varIndex) => (
-                            <div key={varIndex} className="flex items-center gap-2 p-2 border border-primary-100 dark:border-primary-200/20 rounded-md bg-primary-50/30 dark:bg-primary-50/10">
+                            <div
+                              key={varIndex}
+                              className="flex items-center gap-2 p-2 border border-primary-100 dark:border-primary-200/20 rounded-md bg-primary-50/30 dark:bg-primary-50/10"
+                            >
                               <div className="flex-grow">
                                 {prompt.type === "freetext" ? (
                                   <Input
                                     size="sm"
                                     placeholder="输入提示词内容"
-                                    value={varValue.value || ''}
+                                    value={varValue.value || ""}
                                     onChange={(e) => {
                                       const newVariableValues = [...(prompt.variable_values || [])];
                                       newVariableValues[varIndex] = {
                                         ...newVariableValues[varIndex],
-                                        value: e.target.value
+                                        value: e.target.value,
                                       };
-                                      updatePrompt(index, 'variable_values', newVariableValues);
+                                      updatePrompt(index, "variable_values", newVariableValues);
                                     }}
                                     className="w-full"
                                   />
                                 ) : (
                                   <VTokenSelector
-                                    name={varValue.name || ''}
+                                    name={varValue.name || ""}
                                     type={PROMPT_TYPE_TO_VTOKEN_TYPE[prompt.type]}
-                                    header_img={varValue.img_url || ''}
+                                    header_img={varValue.img_url || ""}
                                     onChange={(value) => {
                                       const newVariableValues = [...(prompt.variable_values || [])];
                                       if (!value) {
                                         // 清除
                                         newVariableValues[varIndex] = {
                                           ...newVariableValues[varIndex],
-                                          name: '',
-                                          uuid: '',
-                                          img_url: '',
-                                          value: ''
+                                          name: "",
+                                          uuid: "",
+                                          img_url: "",
+                                          value: "",
                                         };
                                       } else {
                                         // 只更新名称
                                         newVariableValues[varIndex] = {
                                           ...newVariableValues[varIndex],
-                                          name: value
+                                          name: value,
                                         };
                                       }
-                                      updatePrompt(index, 'variable_values', newVariableValues);
+                                      updatePrompt(index, "variable_values", newVariableValues);
                                     }}
                                     onSelectItem={(item: SearchSelectItem) => {
                                       const newVariableValues = [...(prompt.variable_values || [])];
@@ -1579,9 +1663,9 @@ export default function TestPage() {
                                         name: item.name,
                                         uuid: item.uuid,
                                         img_url: item.header_img,
-                                        value: item.uuid
+                                        value: item.uuid,
                                       };
-                                      updatePrompt(index, 'variable_values', newVariableValues);
+                                      updatePrompt(index, "variable_values", newVariableValues);
                                     }}
                                   />
                                 )}
@@ -1599,9 +1683,9 @@ export default function TestPage() {
                                       const newVariableValues = [...(prompt.variable_values || [])];
                                       newVariableValues[varIndex] = {
                                         ...newVariableValues[varIndex],
-                                        weight: value
+                                        weight: value,
                                       };
-                                      updatePrompt(index, 'variable_values', newVariableValues);
+                                      updatePrompt(index, "variable_values", newVariableValues);
                                     }
                                   }}
                                   className="w-full"
@@ -1622,7 +1706,7 @@ export default function TestPage() {
                                     const temp = newVariableValues[varIndex];
                                     newVariableValues[varIndex] = newVariableValues[varIndex - 1];
                                     newVariableValues[varIndex - 1] = temp;
-                                    updatePrompt(index, 'variable_values', newVariableValues);
+                                    updatePrompt(index, "variable_values", newVariableValues);
                                   }}
                                   aria-label={`上移变量值 ${varIndex + 1}`}
                                 >
@@ -1632,13 +1716,15 @@ export default function TestPage() {
                                   size="sm"
                                   variant="light"
                                   isIconOnly
-                                  isDisabled={varIndex === (prompt.variable_values?.length || 0) - 1}
+                                  isDisabled={
+                                    varIndex === (prompt.variable_values?.length || 0) - 1
+                                  }
                                   onPress={() => {
                                     const newVariableValues = [...(prompt.variable_values || [])];
                                     const temp = newVariableValues[varIndex];
                                     newVariableValues[varIndex] = newVariableValues[varIndex + 1];
                                     newVariableValues[varIndex + 1] = temp;
-                                    updatePrompt(index, 'variable_values', newVariableValues);
+                                    updatePrompt(index, "variable_values", newVariableValues);
                                   }}
                                   aria-label={`下移变量值 ${varIndex + 1}`}
                                 >
@@ -1651,8 +1737,10 @@ export default function TestPage() {
                                   onPress={() => {
                                     const newVariableValues = [...(prompt.variable_values || [])];
                                     const valueToDuplicate = newVariableValues[varIndex];
-                                    newVariableValues.splice(varIndex + 1, 0, { ...valueToDuplicate });
-                                    updatePrompt(index, 'variable_values', newVariableValues);
+                                    newVariableValues.splice(varIndex + 1, 0, {
+                                      ...valueToDuplicate,
+                                    });
+                                    updatePrompt(index, "variable_values", newVariableValues);
                                   }}
                                   aria-label={`复制变量值 ${varIndex + 1}`}
                                 >
@@ -1667,7 +1755,7 @@ export default function TestPage() {
                                   onPress={() => {
                                     const newVariableValues = [...(prompt.variable_values || [])];
                                     newVariableValues.splice(varIndex, 1);
-                                    updatePrompt(index, 'variable_values', newVariableValues);
+                                    updatePrompt(index, "variable_values", newVariableValues);
                                   }}
                                   aria-label={`删除变量值 ${varIndex + 1}`}
                                 >
@@ -1695,18 +1783,22 @@ export default function TestPage() {
                     isVariable={ratio.is_variable}
                     variableValues={ratio.variable_values}
                     variableName={ratio.variable_name}
-                    onChange={(newValue) => setRatio(updateParameterVariableValue(ratio, 0, newValue))}
-                    onVariableChange={(isVariable) => setRatio(updateParameterVariableStatus(ratio, isVariable, "比例"))}
+                    onChange={(newValue) =>
+                      setRatio(updateParameterVariableValue(ratio, 0, newValue))
+                    }
+                    onVariableChange={(isVariable) =>
+                      setRatio(updateParameterVariableStatus(ratio, isVariable, "比例"))
+                    }
                     onVariableValuesChange={(values) => {
                       setRatio({
                         ...ratio,
-                        variable_values: values
+                        variable_values: values,
                       });
                     }}
                     onVariableNameChange={(name) => {
                       setRatio({
                         ...ratio,
-                        variable_name: name
+                        variable_name: name,
                       });
                     }}
                   />
@@ -1719,18 +1811,22 @@ export default function TestPage() {
                     isVariable={seed.is_variable}
                     variableValues={seed.variable_values}
                     variableName={seed.variable_name}
-                    onChange={(newValue) => setSeed(updateParameterVariableValue(seed, 0, newValue))}
-                    onVariableChange={(isVariable) => setSeed(updateParameterVariableStatus(seed, isVariable, "种子"))}
+                    onChange={(newValue) =>
+                      setSeed(updateParameterVariableValue(seed, 0, newValue))
+                    }
+                    onVariableChange={(isVariable) =>
+                      setSeed(updateParameterVariableStatus(seed, isVariable, "种子"))
+                    }
                     onVariableValuesChange={(values) => {
                       setSeed({
                         ...seed,
-                        variable_values: values
+                        variable_values: values,
                       });
                     }}
                     onVariableNameChange={(name) => {
                       setSeed({
                         ...seed,
-                        variable_name: name
+                        variable_name: name,
                       });
                     }}
                   />
@@ -1743,18 +1839,22 @@ export default function TestPage() {
                     isVariable={userPolish.is_variable}
                     variableValues={userPolish.variable_values}
                     variableName={userPolish.variable_name}
-                    onChange={(newValue) => setUserPolish(updateParameterVariableValue(userPolish, 0, newValue))}
-                    onVariableChange={(isVariable) => setUserPolish(updateParameterVariableStatus(userPolish, isVariable, "润色"))}
+                    onChange={(newValue) =>
+                      setUserPolish(updateParameterVariableValue(userPolish, 0, newValue))
+                    }
+                    onVariableChange={(isVariable) =>
+                      setUserPolish(updateParameterVariableStatus(userPolish, isVariable, "润色"))
+                    }
                     onVariableValuesChange={(values) => {
                       setUserPolish({
                         ...userPolish,
-                        variable_values: values
+                        variable_values: values,
                       });
                     }}
                     onVariableNameChange={(name) => {
                       setUserPolish({
                         ...userPolish,
-                        variable_name: name
+                        variable_name: name,
                       });
                     }}
                   />
@@ -1767,18 +1867,22 @@ export default function TestPage() {
                     isVariable={isLumina.is_variable}
                     variableValues={isLumina.variable_values}
                     variableName={isLumina.variable_name}
-                    onChange={(newValue) => setIsLumina(updateParameterVariableValue(isLumina, 0, newValue))}
-                    onVariableChange={(isVariable) => setIsLumina(updateParameterVariableStatus(isLumina, isVariable, "lumina"))}
+                    onChange={(newValue) =>
+                      setIsLumina(updateParameterVariableValue(isLumina, 0, newValue))
+                    }
+                    onVariableChange={(isVariable) =>
+                      setIsLumina(updateParameterVariableStatus(isLumina, isVariable, "lumina"))
+                    }
                     onVariableValuesChange={(values) => {
                       setIsLumina({
                         ...isLumina,
-                        variable_values: values
+                        variable_values: values,
                       });
                     }}
                     onVariableNameChange={(name) => {
                       setIsLumina({
                         ...isLumina,
-                        variable_name: name
+                        variable_name: name,
                       });
                     }}
                   />
@@ -1794,18 +1898,26 @@ export default function TestPage() {
                         isVariable={luminaModelName.is_variable}
                         variableValues={luminaModelName.variable_values}
                         variableName={luminaModelName.variable_name}
-                        onChange={(newValue) => setLuminaModelName(updateParameterVariableValue(luminaModelName, 0, newValue))}
-                        onVariableChange={(isVariable) => setLuminaModelName(updateParameterVariableStatus(luminaModelName, isVariable, "模型"))}
+                        onChange={(newValue) =>
+                          setLuminaModelName(
+                            updateParameterVariableValue(luminaModelName, 0, newValue)
+                          )
+                        }
+                        onVariableChange={(isVariable) =>
+                          setLuminaModelName(
+                            updateParameterVariableStatus(luminaModelName, isVariable, "模型")
+                          )
+                        }
                         onVariableValuesChange={(values) => {
                           setLuminaModelName({
                             ...luminaModelName,
-                            variable_values: values
+                            variable_values: values,
                           });
                         }}
                         onVariableNameChange={(name) => {
                           setLuminaModelName({
                             ...luminaModelName,
-                            variable_name: name
+                            variable_name: name,
                           });
                         }}
                         placeholder="输入Lumina模型名称"
@@ -1819,18 +1931,22 @@ export default function TestPage() {
                         isVariable={luminaCfg.is_variable}
                         variableValues={luminaCfg.variable_values}
                         variableName={luminaCfg.variable_name}
-                        onChange={(newValue) => setLuminaCfg(updateParameterVariableValue(luminaCfg, 0, newValue))}
-                        onVariableChange={(isVariable) => setLuminaCfg(updateParameterVariableStatus(luminaCfg, isVariable, "cfg"))}
+                        onChange={(newValue) =>
+                          setLuminaCfg(updateParameterVariableValue(luminaCfg, 0, newValue))
+                        }
+                        onVariableChange={(isVariable) =>
+                          setLuminaCfg(updateParameterVariableStatus(luminaCfg, isVariable, "cfg"))
+                        }
                         onVariableValuesChange={(values) => {
                           setLuminaCfg({
                             ...luminaCfg,
-                            variable_values: values
+                            variable_values: values,
                           });
                         }}
                         onVariableNameChange={(name) => {
                           setLuminaCfg({
                             ...luminaCfg,
-                            variable_name: name
+                            variable_name: name,
                           });
                         }}
                         min={0}
@@ -1846,18 +1962,24 @@ export default function TestPage() {
                         isVariable={luminaStep.is_variable}
                         variableValues={luminaStep.variable_values}
                         variableName={luminaStep.variable_name}
-                        onChange={(newValue) => setLuminaStep(updateParameterVariableValue(luminaStep, 0, newValue))}
-                        onVariableChange={(isVariable) => setLuminaStep(updateParameterVariableStatus(luminaStep, isVariable, "步数"))}
+                        onChange={(newValue) =>
+                          setLuminaStep(updateParameterVariableValue(luminaStep, 0, newValue))
+                        }
+                        onVariableChange={(isVariable) =>
+                          setLuminaStep(
+                            updateParameterVariableStatus(luminaStep, isVariable, "步数")
+                          )
+                        }
                         onVariableValuesChange={(values) => {
                           setLuminaStep({
                             ...luminaStep,
-                            variable_values: values
+                            variable_values: values,
                           });
                         }}
                         onVariableNameChange={(name) => {
                           setLuminaStep({
                             ...luminaStep,
-                            variable_name: name
+                            variable_name: name,
                           });
                         }}
                         min={10}
@@ -1926,7 +2048,9 @@ export default function TestPage() {
 
           {/* 提交结果提示 */}
           {submitResult && (
-            <div className={`mb-3 p-2 rounded-md text-sm ${submitResult.success ? 'bg-success-50 text-success-600' : 'bg-danger-50 text-danger-600'}`}>
+            <div
+              className={`mb-3 p-2 rounded-md text-sm ${submitResult.success ? "bg-success-50 text-success-600" : "bg-danger-50 text-danger-600"}`}
+            >
               {submitResult.success ? (
                 <>
                   <Icon icon="solar:check-circle-bold" className="mr-1" />
@@ -1953,12 +2077,14 @@ export default function TestPage() {
             </Button>
             <Button
               color="primary"
-              startContent={isSubmitting ? <Spinner size="sm" /> : <Icon icon="solar:play-linear" />}
+              startContent={
+                isSubmitting ? <Spinner size="sm" /> : <Icon icon="solar:play-linear" />
+              }
               aria-label="开始任务"
               onPress={submitTask}
               isDisabled={isSubmitting}
             >
-              {isSubmitting ? '提交中...' : '开始任务'}
+              {isSubmitting ? "提交中..." : "开始任务"}
             </Button>
           </div>
         </div>
@@ -1979,9 +2105,7 @@ export default function TestPage() {
           />
         </div>
 
-        {jsonError && (
-          <div className="text-danger text-sm mb-4">{jsonError}</div>
-        )}
+        {jsonError && <div className="text-danger text-sm mb-4">{jsonError}</div>}
 
         <div className="grid grid-cols-3 gap-2">
           <Button
@@ -2053,11 +2177,7 @@ export default function TestPage() {
       />
 
       {/* 重置确认Modal */}
-      <Modal
-        isOpen={isResetModalOpen}
-        onOpenChange={onResetModalChange}
-        placement="center"
-      >
+      <Modal isOpen={isResetModalOpen} onOpenChange={onResetModalChange} placement="center">
         <ModalContent>
           {(onClose) => (
             <>
@@ -2105,10 +2225,10 @@ export default function TestPage() {
                   <div className="p-3 bg-default-100 rounded-md">
                     <p className="text-xs text-default-600 mb-2">常见错误示例：</p>
                     <div className="space-y-1 text-xs font-mono">
-                      <div className="text-danger">❌ "name": 'test',  // 单引号错误</div>
-                      <div className="text-success">✅ "name": "test",  // 双引号正确</div>
-                      <div className="text-danger">❌ {"{ \"a\": 1, }"}  // 多余逗号</div>
-                      <div className="text-success">✅ {"{ \"a\": 1 }"}  // 无多余逗号</div>
+                      <div className="text-danger">❌ "name": 'test', // 单引号错误</div>
+                      <div className="text-success">✅ "name": "test", // 双引号正确</div>
+                      <div className="text-danger">❌ {'{ "a": 1, }'} // 多余逗号</div>
+                      <div className="text-success">✅ {'{ "a": 1 }'} // 无多余逗号</div>
                     </div>
                   </div>
                 </div>

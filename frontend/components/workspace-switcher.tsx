@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { Select, SelectItem, SelectSection } from "@heroui/react";
+import { Select, SelectItem } from "@heroui/react";
 import { Icon } from "@iconify/react";
 import { useRouter } from "next/navigation";
 
-import { WorkspaceMode, WorkspaceModeConfig } from "@/components/sidebar";
+import { WorkspaceMode } from "@/components/sidebar";
 import { workspaceModes } from "@/config/sidebar-config";
 
 interface WorkspaceSwitcherProps {
@@ -18,10 +18,12 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ currentMod
 
   // 根据模式获取首页路径
   const getHomePath = (mode: WorkspaceMode): string => {
-    const modeConfig = workspaceModes.find(m => m.key === mode);
+    const modeConfig = workspaceModes.find((m) => m.key === mode);
+
     if (!modeConfig) return "/";
-    
-    const homeItem = modeConfig.items.find(item => item.key === "home");
+
+    const homeItem = modeConfig.items.find((item) => item.key === "home");
+
     return homeItem?.href || `/${mode}`;
   };
 
@@ -29,6 +31,7 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ currentMod
   const handleModeChange = (mode: WorkspaceMode) => {
     setSelectedMode(mode);
     const path = getHomePath(mode);
+
     router.push(path);
   };
 
@@ -51,15 +54,13 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ currentMod
           </div>
         ));
       }}
-      selectorIcon={
-        <Icon color="hsl(var(--heroui-default-500))" icon="lucide:chevrons-up-down" />
-      }
+      selectorIcon={<Icon color="hsl(var(--heroui-default-500))" icon="lucide:chevrons-up-down" />}
       startContent={
         <div className="relative h-10 w-10 flex-none rounded-full border-small border-default-300">
-          {workspaceModes.find(m => m.key === selectedMode)?.icon && (
+          {workspaceModes.find((m) => m.key === selectedMode)?.icon && (
             <Icon
               className="ml-2 mt-2 text-default-500"
-              icon={workspaceModes.find(m => m.key === selectedMode)?.icon || ""}
+              icon={workspaceModes.find((m) => m.key === selectedMode)?.icon || ""}
               width={24}
             />
           )}
@@ -67,6 +68,7 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ currentMod
       }
       onSelectionChange={(keys) => {
         const key = Array.from(keys)[0] as WorkspaceMode;
+
         if (key) {
           handleModeChange(key);
         }

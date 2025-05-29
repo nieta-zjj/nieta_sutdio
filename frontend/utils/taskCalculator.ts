@@ -6,38 +6,58 @@
  * @returns 任务总数量
  */
 export const calculateTaskCount = (taskData: any): number => {
-    let totalCount = 1;
+  let totalCount = 1;
 
-    // 获取batch_size
-    const batchSize = taskData.batch_size?.value || 1;
-    if (typeof batchSize === 'number' && batchSize > 0) {
-        totalCount *= batchSize;
-    }
+  // 获取batch_size
+  const batchSize = taskData.batch_size?.value || 1;
 
-    // 处理提示词变量
-    if (taskData.prompts && Array.isArray(taskData.prompts)) {
-        taskData.prompts.forEach((prompt: any) => {
-            if (prompt.is_variable && prompt.variable_values && Array.isArray(prompt.variable_values)) {
-                if (prompt.variable_values.length > 0) {
-                    totalCount *= prompt.variable_values.length;
-                }
-            }
-        });
-    }
+  if (typeof batchSize === "number" && batchSize > 0) {
+    totalCount *= batchSize;
+  }
 
-    // 处理其他参数变量
-    const paramKeys = ['ratio', 'seed', 'use_polish', 'is_lumina', 'lumina_model_name', 'lumina_cfg', 'lumina_step'];
-
-    paramKeys.forEach(key => {
-        const param = taskData[key];
-        if (param && param.is_variable && param.variable_values && Array.isArray(param.variable_values)) {
-            if (param.variable_values.length > 0) {
-                totalCount *= param.variable_values.length;
-            }
-        }
+  // 处理提示词变量
+  if (taskData.prompts && Array.isArray(taskData.prompts)) {
+    taskData.prompts.forEach((prompt: any) => {
+      if (
+        prompt.is_variable &&
+        prompt.variable_values &&
+        Array.isArray(prompt.variable_values) &&
+        prompt.variable_values.length > 0
+      ) {
+        totalCount *= prompt.variable_values.length;
+      }
     });
+  }
 
-    return totalCount;
+  // 处理其他参数变量
+  const paramKeys = [
+    "ratio",
+    "seed",
+    "use_polish",
+    "is_lumina",
+    "lumina_model_name",
+    "lumina_cfg",
+    "lumina_step",
+  ];
+
+  paramKeys.forEach((key) => {
+    if (Object.prototype.hasOwnProperty.call(taskData, key)) {
+      const param = taskData[key as keyof typeof taskData];
+
+      if (
+        param &&
+        typeof param === "object" &&
+        param.is_variable &&
+        param.variable_values &&
+        Array.isArray(param.variable_values) &&
+        param.variable_values.length > 0
+      ) {
+        totalCount *= param.variable_values.length;
+      }
+    }
+  });
+
+  return totalCount;
 };
 
 /**
@@ -46,7 +66,7 @@ export const calculateTaskCount = (taskData: any): number => {
  * @returns 格式化的字符串
  */
 export const formatTaskCount = (count: number): string => {
-    return count.toLocaleString();
+  return count.toLocaleString();
 };
 
 /**
@@ -56,5 +76,5 @@ export const formatTaskCount = (count: number): string => {
  * @returns 是否超过限制
  */
 export const isTaskCountExceeded = (count: number, limit: number = 50000): boolean => {
-    return count > limit;
+  return count > limit;
 };

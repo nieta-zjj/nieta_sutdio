@@ -22,11 +22,7 @@ interface LoginModalProps {
   onLoginSuccess: () => void;
 }
 
-export const LoginModal: React.FC<LoginModalProps> = ({
-  isOpen,
-  onClose,
-  onLoginSuccess,
-}) => {
+export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -84,7 +80,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 </div>
               )}
 
-              <Form className="flex flex-col gap-3" validationBehavior="native" onSubmit={handleSubmit}>
+              <Form
+                className="flex flex-col gap-3"
+                validationBehavior="native"
+                onSubmit={handleSubmit}
+              >
                 <Input
                   isRequired
                   label="用户名"

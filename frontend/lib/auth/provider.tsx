@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { AuthContext } from "./client";
 import { getStorageItem, setStorageItem, removeStorageItem } from "./client-storage";
+
 import { login as apiLogin, getCurrentUser as apiGetCurrentUser } from "@/utils/apiClient";
 
 /**
@@ -33,30 +34,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // 获取用户信息
   const fetchUserInfo = async (): Promise<boolean> => {
     setError(null);
+
     try {
-      console.log("正在获取用户信息...");
       const response = await apiGetCurrentUser();
 
       if (response.code === 200 && response.data) {
-        console.log("获取用户信息成功:", response.data);
         // 将API返回的用户数据转换为应用中使用的User类型
         const userData = {
           id: response.data.id,
           username: response.data.username,
           email: response.data.username, // 后端API中没有单独的email字段，使用username
-          roles: response.data.roles
+          roles: response.data.roles,
         };
+
         setUser(userData);
+
         return true;
       } else {
         throw new Error(response.message || "获取用户信息失败");
       }
-    } catch (err) {
-      console.error("获取用户信息失败:", err);
+    } catch {
       setError("获取用户信息失败");
       setUser(null);
       removeStorageItem("access_token");
       setToken(null);
+
       return false;
     }
   };
@@ -73,19 +75,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.code === 200 && response.data) {
         // 保存访问令牌
         const accessToken = response.data.access_token;
+
         setToken(accessToken);
         setStorageItem("access_token", accessToken);
 
         // 获取用户信息
-        const success = await fetchUserInfo();
-        return success;
+        return await fetchUserInfo();
       } else {
         throw new Error(response.message || "登录失败");
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
+
       setError(`登录失败: ${errorMessage}`);
-      console.error("登录失败:", err);
+
       return false;
     } finally {
       setIsLoading(false);
@@ -103,6 +106,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // 检查认证状态
   const checkAuth = async (): Promise<boolean> => {
     if (!token) return false;
+
     return await fetchUserInfo();
   };
 
@@ -117,6 +121,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setToken(storedToken);
           await fetchUserInfo();
         }
+
         setIsLoading(false);
       };
 

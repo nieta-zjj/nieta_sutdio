@@ -1,8 +1,5 @@
 import { SidebarItem } from "@/components/sidebar/sidebar";
 import { WorkspaceMode, WorkspaceModeConfig } from "@/components/sidebar/types";
-import { Chip } from "@heroui/react";
-import { Icon } from "@iconify/react";
-import React from "react";
 
 /**
  * 数据管理工作区侧边栏配置

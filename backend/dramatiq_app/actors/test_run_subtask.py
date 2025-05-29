@@ -524,10 +524,12 @@ async def process_subtask(subtask_id: str) -> Dict[str, Any]:
         # 触发重试
         raise Exception(error_msg)
 
+
 @dramatiq.actor(
     queue_name=settings.SUBTASK_QUEUE,  # 使用子任务队列
-    max_retries=settings.MAX_RETRIES,  # 最多重试3次
+    max_retries=15, #settings.MAX_RETRIES,  # 最多重试3次
     time_limit=300000,  # 300秒，考虑到图像生成可能需要较长时间
+    retry_when=Exception
 )
 def test_run_subtask(subtask_id: str):
     """
@@ -547,14 +549,11 @@ def test_run_subtask(subtask_id: str):
     initialize_app()
 
     if retry_count > 0:
-        try:
-            subtask = Subtask.get_or_none(Subtask.id == subtask_id)
-            if subtask:
-                subtask.error_retry_count = retry_count
-                subtask.save()
-                logger.debug(f"[{subtask_id}] 更新子任务重试计数: {retry_count}")
-        except Exception as e:
-            logger.error(f"[{subtask_id}] 更新重试计数失败: {str(e)}")
+        subtask = Subtask.get_or_none(Subtask.id == subtask_id)
+        if subtask:
+            subtask.error_retry_count = retry_count
+            subtask.save()
+            logger.debug(f"[{subtask_id}] 更新子任务重试计数: {retry_count}")
 
     # 使用事件循环运行异步处理函数
     try:
@@ -573,7 +572,7 @@ def test_run_subtask(subtask_id: str):
 
 @dramatiq.actor(
     queue_name=settings.SUBTASK_OPS_QUEUE,  # 使用Lumina子任务队列
-    max_retries=0,  # 最多重试3次
+    max_retries=15,  # 最多重试3次
     time_limit=600000,  # 600秒，考虑到Lumina图像生成可能需要更长时间
 )
 def test_run_lumina_subtask(subtask_id: str):

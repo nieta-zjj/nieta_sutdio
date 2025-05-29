@@ -18,9 +18,7 @@ export interface ProvidersProps {
 
 declare module "@react-types/shared" {
   interface RouterConfig {
-    routerOptions: NonNullable<
-      Parameters<ReturnType<typeof useRouter>["push"]>[1]
-    >;
+    routerOptions: NonNullable<Parameters<ReturnType<typeof useRouter>["push"]>[1]>;
   }
 }
 
@@ -38,7 +36,7 @@ export function Providers({ children, themeProps }: ProvidersProps) {
               position="top-center"
               toastOptions={{
                 style: {
-                  fontSize: '14px',
+                  fontSize: "14px",
                 },
               }}
             />
