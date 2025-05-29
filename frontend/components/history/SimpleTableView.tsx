@@ -137,6 +137,9 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
         direction: null
     });
 
+    // 表头字符数限制状态
+    const [headerCharLimit, setHeaderCharLimit] = useState(20);
+
     // 获取当前使用的缩放值
     const currentScale = isFullscreen ? internalScale : tableScale;
 
@@ -306,6 +309,18 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
                 />
             </div>
         );
+    };
+
+    // 处理表头文本显示的统一函数
+    const formatHeaderText = (text: string) => {
+        const displayText = text || "";
+        return {
+            displayText: displayText.length > headerCharLimit
+                ? `${displayText.substring(0, headerCharLimit)}...`
+                : displayText,
+            needsTooltip: displayText.length > headerCharLimit,
+            fullText: displayText
+        };
     };
 
     // 渲染单元格
@@ -553,6 +568,22 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
                     <div className="flex-1 max-w-sm">
                         <ScaleController />
                     </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-default-600 whitespace-nowrap">表头字符数:</span>
+                        <input
+                            type="number"
+                            min="5"
+                            max="50"
+                            value={headerCharLimit}
+                            onChange={(e) => {
+                                const value = parseInt(e.target.value);
+                                if (!isNaN(value) && value >= 5 && value <= 50) {
+                                    setHeaderCharLimit(value);
+                                }
+                            }}
+                            className="w-16 px-2 py-1 text-xs border border-default-300 rounded focus:outline-none focus:border-primary-500"
+                        />
+                    </div>
                     <div className="text-xs text-default-500 hidden lg:block">
                         ESC 退出 | +/- 缩放 | 0 重置
                     </div>
@@ -610,38 +641,26 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
                                 onClick={() => toggleSort('rowTitle')}
                             >
                                 <div className="flex items-center justify-center">
-                                    <span
-                                        title={(() => {
-                                            const headerText = xAxis && yAxis
-                                                ? `${xAxis} / ${yAxis}`
-                                                : xAxis
-                                                    ? `${xAxis}`
-                                                    : yAxis
-                                                        ? `${yAxis}`
-                                                        : "";
-                                            return headerText.length > 24 ? headerText : undefined;
-                                        })()}
-                                    >
-                                        {(() => {
-                                            const headerText = xAxis && yAxis
-                                                ? `${xAxis} / ${yAxis}`
-                                                : xAxis
-                                                    ? `${xAxis}`
-                                                    : yAxis
-                                                        ? `${yAxis}`
-                                                        : "";
-                                            return headerText.length > 24 ? `${headerText.substring(0, 24)}...` : headerText;
-                                        })()}
-                                    </span>
-                                    <span className="sort-icon ml-1">
-                                        {renderCopyIcon(xAxis && yAxis
+                                    {(() => {
+                                        const headerText = xAxis && yAxis
                                             ? `${xAxis} / ${yAxis}`
                                             : xAxis
                                                 ? `${xAxis}`
                                                 : yAxis
                                                     ? `${yAxis}`
-                                                    : "")}
-                                    </span>
+                                                    : "";
+                                        const formatted = formatHeaderText(headerText);
+                                        return (
+                                            <>
+                                                <span title={formatted.needsTooltip ? formatted.fullText : undefined}>
+                                                    {formatted.displayText}
+                                                </span>
+                                                <span className="sort-icon ml-1">
+                                                    {renderCopyIcon(formatted.fullText)}
+                                                </span>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                             </th>
                             {columnValues.map((colKey) => (
@@ -652,14 +671,19 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
                                     onClick={() => toggleSort(colKey)}
                                 >
                                     <div className="flex items-center justify-center">
-                                        <span
-                                            title={colKey.length > 24 ? colKey : undefined}
-                                        >
-                                            {colKey.length > 24 ? `${colKey.substring(0, 24)}...` : colKey}
-                                        </span>
-                                        <span className="sort-icon ml-1">
-                                            {renderCopyIcon(colKey)}
-                                        </span>
+                                        {(() => {
+                                            const formatted = formatHeaderText(colKey);
+                                            return (
+                                                <>
+                                                    <span title={formatted.needsTooltip ? formatted.fullText : undefined}>
+                                                        {formatted.displayText}
+                                                    </span>
+                                                    <span className="sort-icon ml-1">
+                                                        {renderCopyIcon(formatted.fullText)}
+                                                    </span>
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 </th>
                             ))}
@@ -670,17 +694,22 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
                             <tr key={row.key || rowIndex}>
                                 <td className="row-title-cell">
                                     <div className="flex items-center justify-center px-2">
-                                        <span
-                                            title={(row.rowTitle as string || "").length > 8 ? (row.rowTitle as string) : undefined}
-                                            className="flex-1 text-center"
-                                        >
-                                            {((row.rowTitle as string) || "").length > 8
-                                                ? `${(row.rowTitle as string).substring(0, 8)}...`
-                                                : row.rowTitle as string}
-                                        </span>
-                                        <span className="ml-1 flex-shrink-0">
-                                            {renderCopyIcon(row.rowTitle as string || "")}
-                                        </span>
+                                        {(() => {
+                                            const formatted = formatHeaderText(row.rowTitle as string);
+                                            return (
+                                                <>
+                                                    <span
+                                                        title={formatted.needsTooltip ? formatted.fullText : undefined}
+                                                        className="flex-1 text-center"
+                                                    >
+                                                        {formatted.displayText}
+                                                    </span>
+                                                    <span className="ml-1 flex-shrink-0">
+                                                        {renderCopyIcon(formatted.fullText)}
+                                                    </span>
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 </td>
                                 {columnValues.map((colKey) => (
@@ -717,6 +746,22 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
                     <ScaleController />
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-default-600 whitespace-nowrap">表头字符数:</span>
+                        <input
+                            type="number"
+                            min="5"
+                            max="50"
+                            value={headerCharLimit}
+                            onChange={(e) => {
+                                const value = parseInt(e.target.value);
+                                if (!isNaN(value) && value >= 5 && value <= 50) {
+                                    setHeaderCharLimit(value);
+                                }
+                            }}
+                            className="w-16 px-2 py-1 text-xs border border-default-300 rounded focus:outline-none focus:border-primary-500"
+                        />
+                    </div>
                     <Button
                         isIconOnly
                         size="sm"
