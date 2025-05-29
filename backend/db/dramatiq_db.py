@@ -32,7 +32,7 @@ def initialize_dramatiq_db():
     db_stale_timeout = max(settings.TEST_DB_STALE_TIMEOUT, 600)     # 增加超时时间
 
     # 创建数据库连接
-    logger.info(f"正在初始化Dramatiq数据库连接: {db_host}:{db_port}/{db_name}")
+    logger.debug(f"正在初始化Dramatiq数据库连接: {db_host}:{db_port}/{db_name}")
     test_db = PooledPostgresqlDatabase(
         db_name,
         user=db_user,
@@ -48,7 +48,7 @@ def initialize_dramatiq_db():
 
     # 初始化代理
     dramatiq_db_proxy.initialize(test_db)
-    logger.info(f"Dramatiq数据库连接池已初始化: 最大连接数={db_max_connections}, 超时时间={db_stale_timeout}秒")
+    logger.debug(f"Dramatiq数据库连接池已初始化: 最大连接数={db_max_connections}, 超时时间={db_stale_timeout}秒")
 
 def close_dramatiq_db():
     """

@@ -45,7 +45,7 @@ class TaskTracker(Middleware):
         task_id = message.kwargs.get("task_id", "未知")
 
         # 记录日志
-        logger.info(f"[{task_id}] 开始处理任务: {message.actor_name}")
+        logger.debug(f"[{task_id}] 开始处理任务: {message.actor_name}")
 
         # 记录事件
         event_name = 'task.dramatiq.before_process_message'

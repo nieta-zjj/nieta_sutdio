@@ -669,9 +669,19 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
                         {sortedTableData.map((row, rowIndex) => (
                             <tr key={row.key || rowIndex}>
                                 <td className="row-title-cell">
-                                    {((row.rowTitle as string) || "").length > 8
-                                        ? `${(row.rowTitle as string).substring(0, 8)}...`
-                                        : row.rowTitle as string}
+                                    <div className="flex items-center justify-center px-2">
+                                        <span
+                                            title={(row.rowTitle as string || "").length > 8 ? (row.rowTitle as string) : undefined}
+                                            className="flex-1 text-center"
+                                        >
+                                            {((row.rowTitle as string) || "").length > 8
+                                                ? `${(row.rowTitle as string).substring(0, 8)}...`
+                                                : row.rowTitle as string}
+                                        </span>
+                                        <span className="ml-1 flex-shrink-0">
+                                            {renderCopyIcon(row.rowTitle as string || "")}
+                                        </span>
+                                    </div>
                                 </td>
                                 {columnValues.map((colKey) => (
                                     <td key={colKey} className="data-cell">

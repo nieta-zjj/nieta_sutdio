@@ -91,15 +91,13 @@
     min-width: 80px;
     max-width: 80px;
     box-shadow: 2px 0 4px rgba(0, 0, 0, 0.15);
-    padding: 2px 4px;
+    padding: 2px;
     height: 220px;
     display: table-cell;
     font-size: 12px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     text-align: center;
     font-weight: 500;
+    vertical-align: middle;
 }
 
 .simple-matrix-table tr {

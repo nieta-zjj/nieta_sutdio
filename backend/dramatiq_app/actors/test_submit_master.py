@@ -64,7 +64,7 @@ def initialize_data(task_id: str, task_data: Dict[str, Any]):
                     variable_id_mapping[original_variable_id] = str(variable_id_counter)
                     variable_id_counter += 1
                 numeric_variable_id = variable_id_mapping[original_variable_id]
-                logger.info(f"重置variable_id: {original_variable_id} -> {numeric_variable_id}")
+                # logger.info(f"重置variable_id: {original_variable_id} -> {numeric_variable_id}")
             else:
                 numeric_variable_id = str(original_variable_id)
 
@@ -132,7 +132,7 @@ def initialize_data(task_id: str, task_data: Dict[str, Any]):
                     variable_id_mapping[original_variable_id] = str(variable_id_counter)
                     variable_id_counter += 1
                 numeric_variable_id = variable_id_mapping[original_variable_id]
-                logger.info(f"重置variable_id: {original_variable_id} -> {numeric_variable_id}")
+                # logger.info(f"重置variable_id: {original_variable_id} -> {numeric_variable_id}")
             else:
                 numeric_variable_id = str(original_variable_id)
 
@@ -163,7 +163,7 @@ def initialize_data(task_id: str, task_data: Dict[str, Any]):
 
     # 记录variable_id映射信息
     if variable_id_mapping:
-        logger.info(f"Variable ID 映射表: {variable_id_mapping}")
+        logger.debug(f"Variable ID 映射表: {variable_id_mapping}")
 
     # 创建任务对象
     task_obj_data = {
@@ -185,24 +185,24 @@ def initialize_data(task_id: str, task_data: Dict[str, Any]):
         task_obj = Task.create(**task_obj_data)
 
     # 准备飞书通知详情
-    details = {
-        #"json配置": task_data,
-        "预计生成图像数": total_images
-    }
+    # details = {
+    #     #"json配置": task_data,
+    #     "预计生成图像数": total_images
+    # }
 
-    # 生成前端详细页面URL
-    frontend_url = f"{settings.FRONTEND_BASE_URL}/model-testing/history/{task_obj.id}"
+    # # 生成前端详细页面URL
+    # frontend_url = f"{settings.FRONTEND_BASE_URL}/model-testing/history/{task_obj.id}"
 
-    # 发送飞书通知
-    feishu_task_notify(
-        event_type="task_submitted",
-        task_id=str(task_obj.id),
-        task_name=task_name,
-        submitter=user.username,
-        details=details,
-        message="任务已提交到测试系统",
-        frontend_url=frontend_url
-    )
+    # # 发送飞书通知
+    # feishu_task_notify(
+    #     event_type="task_submitted",
+    #     task_id=str(task_obj.id),
+    #     task_name=task_name,
+    #     submitter=user.username,
+    #     details=details,
+    #     message="任务已提交到测试系统",
+    #     frontend_url=frontend_url
+    # )
 
     return task_obj
 
@@ -330,7 +330,7 @@ def check_recent_running_tasks(current_task: Task = None) -> int:
         # 确保数据库连接是活跃的
         from backend.db.database import test_db_proxy
         if test_db_proxy.is_closed():
-            logger.info("数据库连接已关闭，尝试重新连接")
+            logger.debug("数据库连接已关闭，尝试重新连接")
             test_db_proxy.connect()
 
         # 查询所有正在执行的任务
@@ -371,7 +371,7 @@ def check_recent_running_tasks(current_task: Task = None) -> int:
         # 尝试重新初始化数据库连接
         try:
             DramatiqBaseModel.initialize_database()
-            logger.info("已尝试重新初始化数据库连接")
+            logger.debug("已尝试重新初始化数据库连接")
         except Exception as db_error:
             logger.error(f"重新初始化数据库连接失败: {str(db_error)}")
         return 0  # 出错时返回0，允许任务继续
@@ -389,7 +389,7 @@ def wait_for_execution_slot(task_obj: Task) -> bool:
         是否成功获取执行槽位
     """
     check_interval = 30  # 每30秒检查一次
-    max_wait_time = 3600  # 最长等待时间（秒）
+    max_wait_time = 3600 * 24  # 最长等待时间（秒），约1.67小时，留出缓冲时间
     total_wait_time = 0
 
     logger.info(f"任务 {task_obj.id} 开始等待执行槽位")
@@ -611,29 +611,29 @@ def cleanup_cancelled_task(task_id: str):
 
         logger.info(f"任务 {task_id} 清理完成: Redis清理={redis_cleaned_count}, 数据库更新={db_updated_count}")
 
-        # 发送任务取消通知
-        try:
-            task = Task.get_or_none(Task.id == task_id)
-            if task:
-                # 生成前端详细页面URL
-                frontend_url = f"{settings.FRONTEND_BASE_URL}/model-testing/history/{task_id}"
+    #     # 发送任务取消通知
+    #     try:
+    #         task = Task.get_or_none(Task.id == task_id)
+    #         if task:
+    #             # 生成前端详细页面URL
+    #             frontend_url = f"{settings.FRONTEND_BASE_URL}/model-testing/history/{task_id}"
 
-                feishu_task_notify(
-                    event_type='task_cancelled',
-                    task_id=str(task_id),
-                    task_name=task.name,
-                    submitter=task.user.username if task.user else "未知用户",
-                    details={
-                        "清理的等待任务数": len(pending_subtasks),
-                        "处理中任务数": len(processing_subtasks),
-                        "Redis清理数": redis_cleaned_count,
-                        "数据库更新数": db_updated_count
-                    },
-                    message="任务已取消，相关子任务已清理",
-                    frontend_url=frontend_url
-                )
-        except Exception as notify_error:
-            logger.warning(f"发送任务取消通知失败: {str(notify_error)}")
+    #             feishu_task_notify(
+    #                 event_type='task_cancelled',
+    #                 task_id=str(task_id),
+    #                 task_name=task.name,
+    #                 submitter=task.user.username if task.user else "未知用户",
+    #                 details={
+    #                     "清理的等待任务数": len(pending_subtasks),
+    #                     "处理中任务数": len(processing_subtasks),
+    #                     "Redis清理数": redis_cleaned_count,
+    #                     "数据库更新数": db_updated_count
+    #                 },
+    #                 message="任务已取消，相关子任务已清理",
+    #                 frontend_url=frontend_url
+    #             )
+    #     except Exception as notify_error:
+    #         logger.warning(f"发送任务取消通知失败: {str(notify_error)}")
 
     except Exception as e:
         logger.error(f"清理被取消的任务 {task_id} 时出错: {str(e)}")
@@ -997,7 +997,6 @@ def create_subtasks_from_task(task_obj: Task) -> List[Subtask]:
                     logger.info(f"任务 {task_obj.id}, 子任务 (空间坐标: {spatial_coordinates_tuple}): "
                                f"过滤掉 {original_count - filtered_count} 个空值提示词，"
                                f"最终保留 {filtered_count} 个有效提示词")
-                # 如果允许某些提示词在某些子任务中完全不存在（而不是仅值不同），则上面的None检查需要调整
 
             # 4. 准备 Subtask 数据并创建对象
             subtask_payload = {
@@ -1015,7 +1014,7 @@ def create_subtasks_from_task(task_obj: Task) -> List[Subtask]:
 @dramatiq.actor(
     queue_name="test_master",  # 使用标准队列
     max_retries=settings.MAX_RETRIES,
-    time_limit=3600000,  # 3600秒 (1小时)，考虑到可能需要等待执行槽位
+    time_limit=3600000*24,  # 3600秒 (1小时) * 24 = 24小时，考虑到可能需要等待执行槽位更长时间
 )
 def test_submit_master(task_id: str, task_data: Dict[str, Any]):
     """
@@ -1059,25 +1058,25 @@ def test_submit_master(task_id: str, task_data: Dict[str, Any]):
         # 插入主任务到数据库
         insert_master_task_to_db(task_obj)
 
-        # 发送飞书通知 - 任务已提交
-        try:
-            # 生成前端详细页面URL
-            frontend_url = f"{settings.FRONTEND_BASE_URL}/model-testing/history/{task_obj.id}"
+        # # 发送飞书通知 - 任务已提交
+        # try:
+        #     # 生成前端详细页面URL
+        #     frontend_url = f"{settings.FRONTEND_BASE_URL}/model-testing/history/{task_obj.id}"
 
-            feishu_task_notify(
-                event_type="task_submitted",
-                task_id=str(task_obj.id),
-                task_name=task_obj.name,
-                submitter=task_obj.user.username if task_obj.user else None,
-                details={
-                    "状态": "等待中",
-                },
-                message="任务已提交，等待执行槽位",
-                frontend_url=frontend_url
-            )
-        except Exception as e:
-            # 飞书通知失败不影响主流程
-            logger.warning(f"发送飞书通知失败: {str(e)}")
+        #     feishu_task_notify(
+        #         event_type="task_submitted",
+        #         task_id=str(task_obj.id),
+        #         task_name=task_obj.name,
+        #         submitter=task_obj.user.username if task_obj.user else None,
+        #         details={
+        #             "状态": "等待中",
+        #         },
+        #         message="任务已提交，等待执行槽位",
+        #         frontend_url=frontend_url
+        #     )
+        # except Exception as e:
+        #     # 飞书通知失败不影响主流程
+        #     logger.warning(f"发送飞书通知失败: {str(e)}")
 
         # 创建子任务
         subtasks_to_create = create_subtasks_from_task(task_obj)

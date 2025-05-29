@@ -30,7 +30,7 @@ def initialize_test_db():
         autoconnect=True
     )
     test_db_proxy.initialize(test_db)
-    logger.info(f"数据库连接池已初始化: 最大连接数={max(settings.TEST_DB_MAX_CONNECTIONS, 20)}, 超时时间={max(settings.TEST_DB_STALE_TIMEOUT, 600)}秒")
+    logger.debug(f"数据库连接池已初始化: 最大连接数={max(settings.TEST_DB_MAX_CONNECTIONS, 20)}, 超时时间={max(settings.TEST_DB_STALE_TIMEOUT, 600)}秒")
     return test_db
 
 def close_test_db():

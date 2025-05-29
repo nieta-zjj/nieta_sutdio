@@ -36,7 +36,7 @@ class TaskScheduler:
             return 0
         else:
             # 之后的每个任务与之前减少间隔0.01秒，直到间隔0.5秒不再减少
-            delay = max(3 - 0.01 * index, 0.25)
+            delay = max(0.8 - 0.05 * index, 0.2)
             return delay
 
     @staticmethod
@@ -105,7 +105,7 @@ class TaskScheduler:
 
             # 等待指定的延迟时间
             if delay > 0:
-                logger.info(f"等待 {delay} 秒后执行任务 {subtask.get('id', '')}")
+                logger.debug(f"等待 {delay} 秒后执行任务 {subtask.get('id', '')}")
                 time.sleep(delay)
 
             # 执行任务
