@@ -38,12 +38,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
     setLocalError(null);
 
     try {
-      console.log(`尝试登录，用户名: ${email}`);
       // 使用email作为username参数传递给login函数
       const success = await login(email, password);
 
       if (success) {
-        console.log("登录成功");
         onLoginSuccess();
       } else if (!authError) {
         // 如果没有来自AuthContext的错误，但登录仍然失败
@@ -51,20 +49,20 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
+
       setLocalError(`网络错误，请稍后重试: ${errorMessage}`);
-      console.error("登录请求失败:", err);
     }
   };
 
   return (
     <Modal
       backdrop="blur"
-      isOpen={isOpen}
-      onClose={onClose}
-      placement="center"
       classNames={{
         backdrop: "bg-gradient-to-t from-zinc-900/50 to-zinc-900/50",
       }}
+      isOpen={isOpen}
+      placement="center"
+      onClose={onClose}
     >
       <ModalContent>
         {(onClose) => (
@@ -91,8 +89,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                   name="username"
                   placeholder="请输入您的用户名"
                   type="text"
-                  variant="bordered"
                   value={email}
+                  variant="bordered"
                   onChange={(e) => setEmail(e.target.value)}
                 />
                 <Input
@@ -116,15 +114,15 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                   name="password"
                   placeholder="请输入您的密码"
                   type={isVisible ? "text" : "password"}
-                  variant="bordered"
                   value={password}
+                  variant="bordered"
                   onChange={(e) => setPassword(e.target.value)}
                 />
                 <div className="flex w-full items-center px-1 py-2">
                   <Checkbox
+                    isSelected={rememberMe}
                     name="remember"
                     size="sm"
-                    isSelected={rememberMe}
                     onValueChange={setRememberMe}
                   >
                     记住我
@@ -141,6 +139,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                 isLoading={isLoading}
                 onPress={() => {
                   const form = document.querySelector("form");
+
                   if (form) {
                     form.requestSubmit();
                   }

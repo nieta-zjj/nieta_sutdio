@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { ScrollShadow, Spacer } from "@heroui/react";
+import { ScrollShadow } from "@heroui/react";
 
 import Sidebar from "@/components/sidebar/sidebar";
 import { WorkspaceMode } from "@/components/sidebar";
@@ -28,6 +28,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       mode = WorkspaceMode.ModelTesting;
       // 提取子路径作为key
       const subPath = pathname.split("/")[2];
+
       if (subPath) {
         key = subPath;
       } else {
@@ -39,6 +40,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     } else if (pathname.startsWith("/data-management")) {
       // 提取子路径作为key
       const subPath = pathname.split("/")[2];
+
       if (subPath) {
         key = subPath;
       } else {

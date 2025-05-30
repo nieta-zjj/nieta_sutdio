@@ -1,36 +1,27 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   CardBody,
   Chip,
-  Progress,
   Button,
   Input,
-  Select,
-  SelectItem,
   Pagination,
   Badge,
-  Spinner,
   Tooltip,
   Tabs,
   Tab,
   Switch,
 } from "@heroui/react";
 import { Icon } from "@iconify/react";
-import {
-  getTasks,
-  toggleTaskFavorite,
-  getTask,
-  toggleTaskDelete,
-  getTasksStats,
-} from "@/utils/apiClient";
-import { reuseTaskSettings } from "@/utils/taskReuseService";
-import { TaskListItem, APIResponse } from "@/types/task";
-import { TaskStatusChip } from "@/components/task/task-status-chip";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+
+import { getTasks, toggleTaskFavorite, toggleTaskDelete, getTasksStats } from "@/utils/apiClient";
+import { reuseTaskSettings } from "@/utils/taskReuseService";
+import { TaskListItem } from "@/types/task";
+import { TaskStatusChip } from "@/components/task/task-status-chip";
 import { CustomProgress } from "@/components/ui/custom-progress";
 
 export default function HistoryPage() {
@@ -76,55 +67,47 @@ export default function HistoryPage() {
     const endDateParam = searchParams.get("endDate");
 
     // 批量设置状态
-    let needsUpdate = false;
-
     if (pageParam) {
       const pageNumber = parseInt(pageParam, 10);
+
       if (pageNumber > 0) {
         setCurrentPage(pageNumber);
-        needsUpdate = true;
       }
     }
 
     if (statusParam) {
       setStatusFilter(statusParam);
-      needsUpdate = true;
     }
 
     if (usernameParam) {
       setUsernameFilter(usernameParam);
-      needsUpdate = true;
     }
 
     if (taskNameParam) {
       setTaskNameFilter(taskNameParam);
-      needsUpdate = true;
     }
 
     if (favoriteParam) {
       setFavoriteFilter(favoriteParam);
-      needsUpdate = true;
     }
 
     if (deletedParam) {
       setDeletedFilter(deletedParam);
-      needsUpdate = true;
     }
 
     if (minSubtasksParam) {
       setMinSubtasks(minSubtasksParam);
-      needsUpdate = true;
     }
 
     if (maxSubtasksParam) {
       setMaxSubtasks(maxSubtasksParam);
-      needsUpdate = true;
     }
 
     if (startDateParam && endDateParam) {
       try {
         const startDate = new Date(startDateParam);
         const endDate = new Date(endDateParam);
+
         setDateRange({
           start: {
             year: startDate.getFullYear(),
@@ -137,9 +120,8 @@ export default function HistoryPage() {
             day: endDate.getDate(),
           },
         });
-        needsUpdate = true;
-      } catch (error) {
-        console.error("解析日期参数失败:", error);
+      } catch {
+        // 忽略日期解析错误
       }
     }
 
@@ -160,6 +142,7 @@ export default function HistoryPage() {
     });
 
     const newUrl = params.toString() ? `?${params.toString()}` : "";
+
     router.replace(`/model-testing/history${newUrl}`, { scroll: false });
   };
 
@@ -218,6 +201,7 @@ export default function HistoryPage() {
     if (range && range.start && range.end) {
       const startDate = new Date(range.start.year, range.start.month - 1, range.start.day);
       const endDate = new Date(range.end.year, range.end.month - 1, range.end.day);
+
       updateUrlParams({
         startDate: startDate.toISOString().split("T")[0],
         endDate: endDate.toISOString().split("T")[0],
@@ -241,7 +225,7 @@ export default function HistoryPage() {
   };
 
   // 加载任务统计
-  const loadTasksStats = async () => {
+  const loadTasksStats = useCallback(async () => {
     try {
       // 准备统计API参数
       const statsParams: any = {
@@ -261,6 +245,7 @@ export default function HistoryPage() {
           dateRange.start.day
         );
         const endDate = new Date(dateRange.end.year, dateRange.end.month - 1, dateRange.end.day);
+
         statsParams.startDate = startDate.toISOString().split("T")[0];
         statsParams.endDate = endDate.toISOString().split("T")[0];
       }
@@ -286,13 +271,21 @@ export default function HistoryPage() {
         setProcessingCount(statsResponse.data.processing || 0);
         setPendingCount(statsResponse.data.pending || 0);
       }
-    } catch (error) {
-      console.error("加载任务统计失败:", error);
+    } catch {
+      // 忽略统计加载错误
     }
-  };
+  }, [
+    usernameFilter,
+    taskNameFilter,
+    favoriteFilter,
+    deletedFilter,
+    minSubtasks,
+    maxSubtasks,
+    dateRange,
+  ]);
 
   // 加载任务列表
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -317,6 +310,7 @@ export default function HistoryPage() {
           dateRange.start.day
         );
         const endDate = new Date(dateRange.end.year, dateRange.end.month - 1, dateRange.end.day);
+
         apiParams.startDate = startDate.toISOString().split("T")[0];
         apiParams.endDate = endDate.toISOString().split("T")[0];
       }
@@ -342,12 +336,24 @@ export default function HistoryPage() {
 
       // 同时加载统计数据
       await loadTasksStats();
-    } catch (error) {
-      console.error("加载任务列表失败:", error);
+    } catch {
+      // 忽略任务列表加载错误
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    currentPage,
+    pageSize,
+    statusFilter,
+    usernameFilter,
+    taskNameFilter,
+    favoriteFilter,
+    deletedFilter,
+    minSubtasks,
+    maxSubtasks,
+    dateRange,
+    loadTasksStats,
+  ]);
 
   // 清除所有筛选条件
   const clearFilters = () => {
@@ -379,7 +385,7 @@ export default function HistoryPage() {
     if (isInitialized) {
       loadTasks();
     }
-  }, [isInitialized]);
+  }, [isInitialized, loadTasks]);
 
   // 当筛选条件或分页改变时重新加载数据
   useEffect(() => {
@@ -398,6 +404,7 @@ export default function HistoryPage() {
     minSubtasks,
     maxSubtasks,
     dateRange,
+    loadTasks,
   ]);
 
   return (
@@ -411,44 +418,44 @@ export default function HistoryPage() {
 
               {/* 统计徽章 */}
               <div className="flex items-center gap-3 flex-wrap mb-2">
-                <Badge content={totalTasks} color="default" size="lg">
-                  <Chip variant="flat" color="default" size="sm">
-                    <Icon icon="solar:list-linear" className="w-4 h-4 mr-1" />
+                <Badge color="default" content={totalTasks} size="lg">
+                  <Chip color="default" size="sm" variant="flat">
+                    <Icon className="w-4 h-4 mr-1" icon="solar:list-linear" />
                     总计
                   </Chip>
                 </Badge>
 
-                <Badge content={successCount} color="success" size="lg">
-                  <Chip variant="flat" color="success" size="sm">
-                    <Icon icon="solar:check-circle-linear" className="w-4 h-4 mr-1" />
+                <Badge color="success" content={successCount} size="lg">
+                  <Chip color="success" size="sm" variant="flat">
+                    <Icon className="w-4 h-4 mr-1" icon="solar:check-circle-linear" />
                     成功
                   </Chip>
                 </Badge>
 
-                <Badge content={failedCount} color="danger" size="lg">
-                  <Chip variant="flat" color="danger" size="sm">
-                    <Icon icon="solar:close-circle-linear" className="w-4 h-4 mr-1" />
+                <Badge color="danger" content={failedCount} size="lg">
+                  <Chip color="danger" size="sm" variant="flat">
+                    <Icon className="w-4 h-4 mr-1" icon="solar:close-circle-linear" />
                     失败
                   </Chip>
                 </Badge>
 
-                <Badge content={cancelledCount} color="warning" size="lg">
-                  <Chip variant="flat" color="warning" size="sm">
-                    <Icon icon="solar:stop-circle-linear" className="w-4 h-4 mr-1" />
+                <Badge color="warning" content={cancelledCount} size="lg">
+                  <Chip color="warning" size="sm" variant="flat">
+                    <Icon className="w-4 h-4 mr-1" icon="solar:stop-circle-linear" />
                     取消
                   </Chip>
                 </Badge>
 
-                <Badge content={processingCount} color="primary" size="lg">
-                  <Chip variant="flat" color="primary" size="sm">
-                    <Icon icon="solar:play-circle-linear" className="w-4 h-4 mr-1" />
+                <Badge color="primary" content={processingCount} size="lg">
+                  <Chip color="primary" size="sm" variant="flat">
+                    <Icon className="w-4 h-4 mr-1" icon="solar:play-circle-linear" />
                     执行中
                   </Chip>
                 </Badge>
 
-                <Badge content={pendingCount} color="secondary" size="lg">
-                  <Chip variant="flat" color="secondary" size="sm">
-                    <Icon icon="solar:clock-circle-linear" className="w-4 h-4 mr-1" />
+                <Badge color="secondary" content={pendingCount} size="lg">
+                  <Chip color="secondary" size="sm" variant="flat">
+                    <Icon className="w-4 h-4 mr-1" icon="solar:clock-circle-linear" />
                     排队中
                   </Chip>
                 </Badge>
@@ -461,17 +468,17 @@ export default function HistoryPage() {
             {/* 状态筛选 - 改为Tab样式 */}
             <div className="flex items-center gap-2 min-w-[400px]">
               <Tabs
-                size="sm"
                 aria-label="任务状态筛选"
-                selectedKey={statusFilter}
-                onSelectionChange={(key) => {
-                  handleStatusFilterChange(key.toString());
-                }}
                 classNames={{
                   base: "w-full",
                   tabList: "gap-1 w-full",
                   tab: "h-7 px-3 py-0",
                   cursor: "h-7",
+                }}
+                selectedKey={statusFilter}
+                size="sm"
+                onSelectionChange={(key) => {
+                  handleStatusFilterChange(key.toString());
                 }}
               >
                 <Tab key="" title="全部" />
@@ -487,14 +494,14 @@ export default function HistoryPage() {
             <div className="flex items-center gap-2 min-w-[200px]">
               <span className="text-sm font-medium text-nowrap">任务搜索</span>
               <Input
-                size="sm"
+                className="w-48"
                 placeholder="按名称搜索"
+                size="sm"
+                startContent={<Icon className="text-default-400" icon="solar:magnifer-linear" />}
                 value={taskNameFilter}
                 onChange={(e) => {
                   handleTaskNameFilterChange(e.target.value);
                 }}
-                startContent={<Icon icon="solar:magnifer-linear" className="text-default-400" />}
-                className="w-48"
               />
             </div>
 
@@ -502,14 +509,14 @@ export default function HistoryPage() {
             <div className="flex items-center gap-2 min-w-[150px]">
               <span className="text-sm font-medium text-nowrap">用户筛选</span>
               <Input
-                size="sm"
+                className="w-32"
                 placeholder="输入用户名"
+                size="sm"
+                startContent={<Icon className="text-default-400" icon="solar:user-linear" />}
                 value={usernameFilter}
                 onChange={(e) => {
                   handleUsernameFilterChange(e.target.value);
                 }}
-                startContent={<Icon icon="solar:user-linear" className="text-default-400" />}
-                className="w-32"
               />
             </div>
 
@@ -517,12 +524,12 @@ export default function HistoryPage() {
             <div className="flex items-center gap-2 min-w-[80px]">
               <span className="text-sm font-medium text-nowrap">收藏</span>
               <Switch
-                size="sm"
+                aria-label="只显示收藏的任务"
                 isSelected={favoriteFilter === "favorite"}
+                size="sm"
                 onValueChange={(checked) => {
                   handleFavoriteFilterChange(checked ? "favorite" : "");
                 }}
-                aria-label="只显示收藏的任务"
               />
             </div>
 
@@ -530,12 +537,12 @@ export default function HistoryPage() {
             <div className="flex items-center gap-2 min-w-[80px]">
               <span className="text-sm font-medium text-nowrap">删除</span>
               <Switch
-                size="sm"
+                aria-label="显示已删除的任务"
                 isSelected={deletedFilter === "deleted"}
+                size="sm"
                 onValueChange={(checked) => {
                   handleDeletedFilterChange(checked ? "deleted" : "");
                 }}
-                aria-label="显示已删除的任务"
               />
             </div>
 
@@ -544,27 +551,27 @@ export default function HistoryPage() {
               <span className="text-sm font-medium text-nowrap">子任务数量</span>
               <div className="flex items-center gap-1">
                 <Input
+                  className="w-20"
+                  min="0"
+                  placeholder="最小值"
                   size="sm"
                   type="number"
-                  placeholder="最小值"
                   value={minSubtasks}
                   onChange={(e) => {
                     handleSubtasksFilterChange(e.target.value, maxSubtasks);
                   }}
-                  className="w-20"
-                  min="0"
                 />
                 <span className="text-sm text-default-400">-</span>
                 <Input
+                  className="w-20"
+                  min="0"
+                  placeholder="最大值"
                   size="sm"
                   type="number"
-                  placeholder="最大值"
                   value={maxSubtasks}
                   onChange={(e) => {
                     handleSubtasksFilterChange(minSubtasks, e.target.value);
                   }}
-                  className="w-20"
-                  min="0"
                 />
               </div>
             </div>
@@ -574,10 +581,10 @@ export default function HistoryPage() {
               <span className="text-sm font-medium text-nowrap">时间筛选</span>
               <div className="flex items-center gap-1">
                 <Input
+                  className="w-32"
+                  placeholder="开始日期"
                   size="sm"
                   type="date"
-                  placeholder="开始日期"
-                  className="w-32"
                   value={
                     dateRange?.start
                       ? `${dateRange.start.year}-${String(dateRange.start.month).padStart(2, "0")}-${String(dateRange.start.day).padStart(2, "0")}`
@@ -585,6 +592,7 @@ export default function HistoryPage() {
                   }
                   onChange={(e) => {
                     const value = e.target.value;
+
                     if (value) {
                       const date = new Date(value);
                       const startCalendar = {
@@ -592,6 +600,7 @@ export default function HistoryPage() {
                         month: date.getMonth() + 1,
                         day: date.getDate(),
                       };
+
                       handleDateRangeChange({
                         start: startCalendar,
                         end: dateRange?.end || startCalendar,
@@ -601,10 +610,10 @@ export default function HistoryPage() {
                 />
                 <span className="text-sm text-default-400">至</span>
                 <Input
+                  className="w-32"
+                  placeholder="结束日期"
                   size="sm"
                   type="date"
-                  placeholder="结束日期"
-                  className="w-32"
                   value={
                     dateRange?.end
                       ? `${dateRange.end.year}-${String(dateRange.end.month).padStart(2, "0")}-${String(dateRange.end.day).padStart(2, "0")}`
@@ -612,6 +621,7 @@ export default function HistoryPage() {
                   }
                   onChange={(e) => {
                     const value = e.target.value;
+
                     if (value) {
                       const date = new Date(value);
                       const endCalendar = {
@@ -619,6 +629,7 @@ export default function HistoryPage() {
                         month: date.getMonth() + 1,
                         day: date.getDate(),
                       };
+
                       handleDateRangeChange({
                         start: dateRange?.start || endCalendar,
                         end: endCalendar,
@@ -642,6 +653,7 @@ export default function HistoryPage() {
                       month: today.getMonth() + 1,
                       day: today.getDate(),
                     };
+
                     handleDateRangeChange({ start: todayCalendar, end: todayCalendar });
                   }}
                 >
@@ -653,12 +665,14 @@ export default function HistoryPage() {
                   onPress={() => {
                     const today = new Date();
                     const yesterday = new Date(today);
+
                     yesterday.setDate(yesterday.getDate() - 1);
                     const yesterdayCalendar = {
                       year: yesterday.getFullYear(),
                       month: yesterday.getMonth() + 1,
                       day: yesterday.getDate(),
                     };
+
                     handleDateRangeChange({ start: yesterdayCalendar, end: yesterdayCalendar });
                   }}
                 >
@@ -670,6 +684,7 @@ export default function HistoryPage() {
                   onPress={() => {
                     const today = new Date();
                     const lastWeek = new Date(today);
+
                     lastWeek.setDate(lastWeek.getDate() - 7);
                     const todayCalendar = {
                       year: today.getFullYear(),
@@ -681,6 +696,7 @@ export default function HistoryPage() {
                       month: lastWeek.getMonth() + 1,
                       day: lastWeek.getDate(),
                     };
+
                     handleDateRangeChange({ start: lastWeekCalendar, end: todayCalendar });
                   }}
                 >
@@ -692,6 +708,7 @@ export default function HistoryPage() {
                   onPress={() => {
                     const today = new Date();
                     const lastMonth = new Date(today);
+
                     lastMonth.setDate(lastMonth.getDate() - 30);
                     const todayCalendar = {
                       year: today.getFullYear(),
@@ -703,6 +720,7 @@ export default function HistoryPage() {
                       month: lastMonth.getMonth() + 1,
                       day: lastMonth.getDate(),
                     };
+
                     handleDateRangeChange({ start: lastMonthCalendar, end: todayCalendar });
                   }}
                 >
@@ -710,10 +728,10 @@ export default function HistoryPage() {
                 </Button>
               </div>
               <Button
-                size="sm"
-                variant="flat"
                 color="danger"
+                size="sm"
                 startContent={<Icon icon="solar:refresh-linear" />}
+                variant="flat"
                 onPress={clearFilters}
               >
                 清除筛选
@@ -726,7 +744,7 @@ export default function HistoryPage() {
         {!loading && tasks.length === 0 ? (
           <div className="flex-1 flex items-center justify-center text-center text-default-400 bg-default-50 rounded-lg border border-default-200 p-8">
             <div>
-              <Icon icon="solar:file-text-linear" className="w-16 h-16 mx-auto mb-4" />
+              <Icon className="w-16 h-16 mx-auto mb-4" icon="solar:file-text-linear" />
               <p className="text-lg">没有找到匹配的任务</p>
               <p className="text-sm">尝试调整筛选条件</p>
             </div>
@@ -743,11 +761,11 @@ export default function HistoryPage() {
                     <Card key={index} className="animate-pulse">
                       <CardBody className="p-4">
                         <div className="space-y-3">
-                          <div className="h-4 bg-default-200 rounded w-3/4"></div>
-                          <div className="h-3 bg-default-200 rounded w-1/2"></div>
-                          <div className="h-3 bg-default-200 rounded w-2/3"></div>
-                          <div className="h-2 bg-default-200 rounded w-full"></div>
-                          <div className="h-8 bg-default-200 rounded w-full"></div>
+                          <div className="h-4 bg-default-200 rounded w-3/4" />
+                          <div className="h-3 bg-default-200 rounded w-1/2" />
+                          <div className="h-3 bg-default-200 rounded w-2/3" />
+                          <div className="h-2 bg-default-200 rounded w-full" />
+                          <div className="h-8 bg-default-200 rounded w-full" />
                         </div>
                       </CardBody>
                     </Card>
@@ -761,17 +779,17 @@ export default function HistoryPage() {
                             <h3 className="font-semibold text-sm truncate flex-1 pr-2">
                               {task.name}
                             </h3>
-                            <TaskStatusChip status={task.status} size="sm" />
+                            <TaskStatusChip size="sm" status={task.status} />
                           </div>
 
                           {/* 用户和时间信息 */}
                           <div className="space-y-1 text-xs text-default-500">
                             <div className="flex items-center">
-                              <Icon icon="solar:user-linear" className="w-3 h-3 mr-1" />
+                              <Icon className="w-3 h-3 mr-1" icon="solar:user-linear" />
                               <span className="truncate">{task.username}</span>
                             </div>
                             <div className="flex items-center">
-                              <Icon icon="solar:calendar-linear" className="w-3 h-3 mr-1" />
+                              <Icon className="w-3 h-3 mr-1" icon="solar:calendar-linear" />
                               <span>{formatTime(task.created_at)}</span>
                             </div>
                           </div>
@@ -798,11 +816,11 @@ export default function HistoryPage() {
                               <span className="font-medium">{task.progress}%</span>
                             </div>
                             <CustomProgress
-                              total={task.total_images}
+                              className="w-full"
                               completed={task.completed_images}
                               failed={task.failed_images}
                               size="sm"
-                              className="w-full"
+                              total={task.total_images}
                             />
                           </div>
 
@@ -813,15 +831,15 @@ export default function HistoryPage() {
                             </span>
                             <Tooltip content="复制任务ID">
                               <Button
-                                size="sm"
-                                variant="light"
                                 isIconOnly
                                 className="h-4 w-4 min-w-4 ml-1"
+                                size="sm"
+                                variant="light"
                                 onPress={() => {
                                   navigator.clipboard.writeText(task.id);
                                 }}
                               >
-                                <Icon icon="solar:copy-linear" className="w-3 h-3" />
+                                <Icon className="w-3 h-3" icon="solar:copy-linear" />
                               </Button>
                             </Tooltip>
                           </div>
@@ -831,35 +849,34 @@ export default function HistoryPage() {
                             <div className="flex items-center gap-2">
                               <Tooltip content="收藏任务">
                                 <Button
+                                  isIconOnly
                                   size="sm"
                                   variant="flat"
-                                  isIconOnly
                                   onPress={async () => {
                                     try {
                                       await toggleTaskFavorite(task.id);
                                       // 重新加载任务列表以更新收藏状态
                                       loadTasks();
                                       toast.success(task.is_favorite ? "取消收藏成功" : "收藏成功");
-                                    } catch (error) {
-                                      console.error("切换收藏状态失败:", error);
+                                    } catch {
                                       toast.error("操作失败");
                                     }
                                   }}
                                 >
                                   <Icon
+                                    className={`w-4 h-4 ${task.is_favorite ? "text-warning" : ""}`}
                                     icon={
                                       task.is_favorite ? "solar:star-bold" : "solar:star-linear"
                                     }
-                                    className={`w-4 h-4 ${task.is_favorite ? "text-warning" : ""}`}
                                   />
                                 </Button>
                               </Tooltip>
 
                               <Tooltip content={task.is_deleted ? "恢复任务" : "删除任务"}>
                                 <Button
+                                  isIconOnly
                                   size="sm"
                                   variant="flat"
-                                  isIconOnly
                                   onPress={async () => {
                                     try {
                                       await toggleTaskDelete(task.id);
@@ -868,19 +885,18 @@ export default function HistoryPage() {
                                       toast.success(
                                         task.is_deleted ? "恢复任务成功" : "删除任务成功"
                                       );
-                                    } catch (error) {
-                                      console.error("切换删除状态失败:", error);
+                                    } catch {
                                       toast.error("操作失败");
                                     }
                                   }}
                                 >
                                   <Icon
+                                    className={`w-4 h-4 ${task.is_deleted ? "text-success" : "text-danger"}`}
                                     icon={
                                       task.is_deleted
                                         ? "solar:refresh-linear"
                                         : "solar:trash-bin-minimalistic-linear"
                                     }
-                                    className={`w-4 h-4 ${task.is_deleted ? "text-success" : "text-danger"}`}
                                   />
                                 </Button>
                               </Tooltip>
@@ -910,7 +926,9 @@ export default function HistoryPage() {
                                           const { clearReusedTaskData } = await import(
                                             "@/utils/taskReuseService"
                                           );
+
                                           clearReusedTaskData();
+
                                           return;
                                         }
                                       }
@@ -923,9 +941,8 @@ export default function HistoryPage() {
                                     } else {
                                       toast.error(result.message || "复用任务失败");
                                     }
-                                  } catch (error) {
-                                    console.error("复用任务失败:", error);
-                                    toast.error("复用任务失败");
+                                  } catch {
+                                    toast.error("操作失败");
                                   }
                                 }}
                               >
@@ -956,14 +973,14 @@ export default function HistoryPage() {
       {totalPages > 1 && (
         <div className="flex-shrink-0 flex justify-center pt-6 border-t border-default-100 bg-background/80 backdrop-blur-sm">
           <Pagination
-            total={totalPages}
-            page={currentPage}
-            onChange={handlePageChange}
-            boundaries={3}
             isCompact
             showControls
             showShadow
+            boundaries={3}
             color="primary"
+            page={currentPage}
+            total={totalPages}
+            onChange={handlePageChange}
           />
         </div>
       )}

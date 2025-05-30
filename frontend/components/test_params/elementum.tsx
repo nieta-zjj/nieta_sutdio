@@ -1,8 +1,10 @@
 "use client";
 
 import React from "react";
+
 import { BaseParamComponent } from "./BaseParam";
 import { VTokenParamProps, ParamValueType } from "./types";
+
 import { VTokenSelector } from "@/components/vtoken";
 import { SearchSelectItem } from "@/types/search";
 
@@ -27,7 +29,7 @@ export const ElementumParam: React.FC<
     onVariableChange = () => {},
     isVariable = false,
     name = "",
-    uuid = "",
+    uuid = "", // eslint-disable-line @typescript-eslint/no-unused-vars -- 需要的 props 接口的一部分
     header_img = "",
     onSelectElement,
     ...rest
@@ -40,9 +42,9 @@ export const ElementumParam: React.FC<
   ) => {
     return (
       <VTokenSelector
+        header_img={header_img}
         name={name}
         type="element"
-        header_img={header_img}
         onChange={(value) => {
           // 如果用户清除了选择，则清除所有相关字段
           if (!value) {
@@ -61,6 +63,7 @@ export const ElementumParam: React.FC<
             uuid: item.uuid,
             header_img: item.header_img,
           };
+
           onSelectElement?.(info);
         }}
       />
@@ -69,13 +72,13 @@ export const ElementumParam: React.FC<
 
   return (
     <BaseParamComponent
+      defaultValue=""
+      isVariable={isVariable}
       label="元素"
+      renderInput={renderInput}
       value={value}
       onChange={onChange}
       onVariableChange={onVariableChange}
-      isVariable={isVariable}
-      renderInput={renderInput}
-      defaultValue=""
       {...rest}
     />
   );

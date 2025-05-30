@@ -8,7 +8,7 @@ import {
   type Selection,
 } from "@heroui/react";
 import React from "react";
-import { Listbox, Tooltip, ListboxItem, ListboxSection } from "@heroui/react";
+import { Listbox, Tooltip, ListboxItem } from "@heroui/react";
 import { Icon } from "@iconify/react";
 import { cn } from "@heroui/react";
 
@@ -45,29 +45,24 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
       defaultSelectedKey,
       onSelect,
       hideEndContent,
-      sectionClasses: sectionClassesProp = {},
+      sectionClasses: _sectionClassesProp = {},
       itemClasses: itemClassesProp = {},
       iconClassName,
       classNames,
       className,
+      onSelectionChange: _onSelectionChange,
       ...props
     },
     ref
   ) => {
-    const [selected, setSelected] = React.useState<React.Key>(defaultSelectedKey);
+    // 常量定义
+    const ICON_BASE_CLASSES = "text-default-500 group-data-[selected=true]:text-foreground";
+    const TEXT_BASE_CLASSES =
+      "text-small font-medium text-default-500 group-data-[selected=true]:text-foreground";
 
-    const sectionClasses = {
-      ...sectionClassesProp,
-      base: cn(sectionClassesProp?.base, "w-full", {
-        "p-0 max-w-[44px]": isCompact,
-      }),
-      group: cn(sectionClassesProp?.group, {
-        "flex flex-col gap-1": isCompact,
-      }),
-      heading: cn(sectionClassesProp?.heading, {
-        hidden: isCompact,
-      }),
-    };
+    const [selectedKeys, setSelectedKeys] = React.useState<Selection>(
+      new Set([defaultSelectedKey])
+    );
 
     const itemClasses = {
       ...itemClassesProp,
@@ -106,10 +101,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
             startContent={
               isCompact || isNestType ? null : item.icon ? (
                 <Icon
-                  className={cn(
-                    "text-default-500 group-data-[selected=true]:text-foreground",
-                    iconClassName
-                  )}
+                  className={cn(ICON_BASE_CLASSES, iconClassName)}
                   icon={item.icon}
                   width={24}
                 />
@@ -119,69 +111,60 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
             }
             title={isCompact || isNestType ? null : item.title}
           >
-            {isCompact ? (
-              <Tooltip content={item.title} placement="right">
-                <div className="flex w-full items-center justify-center">
-                  {item.icon ? (
-                    <Icon
-                      className={cn(
-                        "text-default-500 group-data-[selected=true]:text-foreground",
-                        iconClassName
-                      )}
-                      icon={item.icon}
-                      width={24}
-                    />
-                  ) : (
-                    (item.startContent ?? null)
-                  )}
-                </div>
-              </Tooltip>
-            ) : null}
             {!isCompact && isNestType ? (
-              <Accordion className={"p-0"}>
+              <Accordion className="px-0" itemClasses={{ base: "px-0" }}>
                 <AccordionItem
                   key={item.key}
-                  aria-label={item.title}
                   classNames={{
-                    heading: "pr-3",
-                    trigger: "p-0",
-                    content: "py-0 pl-4",
+                    base: "px-0",
+                    title: "px-0 py-0",
+                    trigger: "px-0 py-0",
+                    content: "py-0 px-0",
                   }}
                   title={
                     item.icon ? (
-                      <div className={"flex h-11 items-center gap-2 px-2 py-1.5"}>
+                      <div className="flex items-center gap-2">
                         <Icon
-                          className={cn(
-                            "text-default-500 group-data-[selected=true]:text-foreground",
-                            iconClassName
-                          )}
+                          className={cn(ICON_BASE_CLASSES, iconClassName)}
                           icon={item.icon}
                           width={24}
                         />
-                        <span className="text-small font-medium text-default-500 group-data-[selected=true]:text-foreground">
-                          {item.title}
-                        </span>
+                        <span className={TEXT_BASE_CLASSES}>{item.title}</span>
                       </div>
                     ) : (
                       (item.startContent ?? null)
                     )
                   }
                 >
-                  {item.items && item.items?.length > 0 ? (
-                    <Listbox
-                      className={"mt-0.5"}
-                      classNames={{
-                        list: cn("border-l border-default-200 pl-4"),
-                      }}
-                      items={item.items}
-                      variant="flat"
-                      aria-label={`${item.title}子菜单`}
-                    >
-                      {item.items.map(renderItem)}
-                    </Listbox>
-                  ) : (
-                    renderItem(item)
-                  )}
+                  <Listbox
+                    className="mt-0.5"
+                    classNames={{
+                      list: "border-l border-default-200 ml-3 pl-3",
+                    }}
+                    items={item.items || []}
+                    variant="flat"
+                  >
+                    {(item.items || []).map((nestedItem) => (
+                      <ListboxItem
+                        {...nestedItem}
+                        key={nestedItem.key}
+                        endContent={hideEndContent ? null : (nestedItem.endContent ?? null)}
+                        startContent={
+                          nestedItem.icon ? (
+                            <Icon
+                              className={cn(ICON_BASE_CLASSES, iconClassName)}
+                              icon={nestedItem.icon}
+                              width={24}
+                            />
+                          ) : (
+                            (nestedItem.startContent ?? null)
+                          )
+                        }
+                        textValue={nestedItem.title}
+                        title={<span className={TEXT_BASE_CLASSES}>{nestedItem.title}</span>}
+                      />
+                    ))}
+                  </Listbox>
                 </AccordionItem>
               </Accordion>
             ) : null}
@@ -204,14 +187,30 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           <ListboxItem
             {...item}
             key={item.key}
+            classNames={{
+              base: cn(itemClasses?.base, {
+                "h-11 gap-0 p-0": isCompact,
+              }),
+            }}
             endContent={isCompact || hideEndContent ? null : (item.endContent ?? null)}
             startContent={
-              isCompact ? null : item.icon ? (
+              isCompact ? (
+                <Tooltip content={item.title} placement="right">
+                  <div className="flex h-full w-full items-center justify-center rounded-small">
+                    {item.icon ? (
+                      <Icon
+                        className={cn(ICON_BASE_CLASSES, iconClassName)}
+                        icon={item.icon}
+                        width={24}
+                      />
+                    ) : (
+                      (item.startContent ?? null)
+                    )}
+                  </div>
+                </Tooltip>
+              ) : item.icon ? (
                 <Icon
-                  className={cn(
-                    "text-default-500 group-data-[selected=true]:text-foreground",
-                    iconClassName
-                  )}
+                  className={cn(ICON_BASE_CLASSES, iconClassName)}
                   icon={item.icon}
                   width={24}
                 />
@@ -220,17 +219,14 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
               )
             }
             textValue={item.title}
-            title={isCompact ? null : item.title}
+            title={isCompact ? null : <span className={TEXT_BASE_CLASSES}>{item.title}</span>}
           >
             {isCompact ? (
               <Tooltip content={item.title} placement="right">
-                <div className="flex w-full items-center justify-center">
+                <div className="flex h-full w-full items-center justify-center rounded-small">
                   {item.icon ? (
                     <Icon
-                      className={cn(
-                        "text-default-500 group-data-[selected=true]:text-foreground",
-                        iconClassName
-                      )}
+                      className={cn(ICON_BASE_CLASSES, iconClassName)}
                       icon={item.icon}
                       width={24}
                     />
@@ -243,61 +239,30 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           </ListboxItem>
         );
       },
-      [isCompact, hideEndContent, iconClassName, itemClasses?.base]
+      [isCompact, hideEndContent, iconClassName, itemClasses?.base, renderNestItem]
     );
 
     return (
       <Listbox
-        key={isCompact ? "compact" : "default"}
         ref={ref}
-        hideSelectedIcon
-        as="nav"
-        className={cn("list-none", className)}
+        className={cn("w-full", className)}
         classNames={{
           ...classNames,
           list: cn("items-center", classNames?.list),
         }}
-        color="default"
-        itemClasses={{
-          ...itemClasses,
-          base: cn(
-            "px-3 min-h-11 rounded-large h-[44px] data-[selected=true]:bg-default-100",
-            itemClasses?.base
-          ),
-          title: cn(
-            "text-small font-medium text-default-500 group-data-[selected=true]:text-foreground",
-            itemClasses?.title
-          ),
-        }}
         items={items}
-        selectedKeys={[selected] as unknown as Selection}
+        selectedKeys={selectedKeys}
         selectionMode="single"
         variant="flat"
-        aria-label="侧边栏导航菜单"
         onSelectionChange={(keys) => {
           const key = Array.from(keys)[0];
 
-          setSelected(key as React.Key);
+          setSelectedKeys(new Set([key as string]));
           onSelect?.(key as string);
         }}
         {...props}
       >
-        {(item) => {
-          return item.items && item.items?.length > 0 && item?.type === SidebarItemType.Nest ? (
-            renderNestItem(item)
-          ) : item.items && item.items?.length > 0 ? (
-            <ListboxSection
-              key={item.key}
-              classNames={sectionClasses}
-              showDivider={isCompact}
-              title={item.title}
-            >
-              {item.items.map(renderItem)}
-            </ListboxSection>
-          ) : (
-            renderItem(item)
-          );
-        }}
+        {renderItem}
       </Listbox>
     );
   }

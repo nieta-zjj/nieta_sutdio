@@ -1,22 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import {
-  Card,
-  CardBody,
-  Chip,
-  Progress,
-  Button,
-  Pagination,
-  Spinner,
-  Tooltip,
-} from "@heroui/react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Card, CardBody, Progress, Button, Pagination, Spinner, Tooltip } from "@heroui/react";
 import { Icon } from "@iconify/react";
+import { toast } from "sonner";
+
 import { getFavoriteTasks, toggleTaskFavorite, getTask } from "@/utils/apiClient";
 import { TaskListItem } from "@/types/task";
 import { TaskStatusChip } from "@/components/task/task-status-chip";
-import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "sonner";
 
 export default function FavoritesPage() {
   const router = useRouter();
@@ -32,8 +24,10 @@ export default function FavoritesPage() {
   // 从URL参数中读取页数
   useEffect(() => {
     const pageParam = searchParams.get("page");
+
     if (pageParam) {
       const pageNumber = parseInt(pageParam, 10);
+
       if (pageNumber > 0) {
         setCurrentPage(pageNumber);
       }
@@ -43,6 +37,7 @@ export default function FavoritesPage() {
   // 更新URL中的页数参数
   const updatePageInUrl = (page: number) => {
     const params = new URLSearchParams(searchParams.toString());
+
     if (page === 1) {
       params.delete("page");
     } else {
@@ -50,12 +45,14 @@ export default function FavoritesPage() {
     }
 
     const newUrl = params.toString() ? `?${params.toString()}` : "";
+
     router.replace(`/model-testing/favorites${newUrl}`, { scroll: false });
   };
 
   // 处理页数变化
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+
     updatePageInUrl(page);
   };
 
@@ -71,25 +68,28 @@ export default function FavoritesPage() {
   };
 
   // 加载收藏任务列表
-  const loadFavoriteTasks = async () => {
+  const loadFavoriteTasks = useCallback(async () => {
     try {
       setLoading(true);
+
       const response = await getFavoriteTasks(currentPage, pageSize);
+
       setTasks(response.data.tasks || []);
       setTotalPages(Math.ceil((response.data.total || 0) / pageSize));
       setTotalTasks(response.data.total || 0);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error("加载收藏任务失败:", error);
       toast.error("加载收藏任务失败");
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, pageSize]);
 
   // 页面加载或页码变化时重新加载
   useEffect(() => {
     loadFavoriteTasks();
-  }, [currentPage]);
+  }, [currentPage, loadFavoriteTasks]);
 
   return (
     <div className="w-full px-6 py-6">
@@ -105,7 +105,7 @@ export default function FavoritesPage() {
         {/* 任务列表 */}
         {!loading && tasks.length === 0 ? (
           <div className="text-center py-12 text-default-400">
-            <Icon icon="solar:star-linear" className="w-16 h-16 mx-auto mb-4" />
+            <Icon className="w-16 h-16 mx-auto mb-4" icon="solar:star-linear" />
             <p className="text-lg">还没有收藏任何任务</p>
             <p className="text-sm">在任务历史中点击星号图标即可收藏任务</p>
           </div>
@@ -121,11 +121,11 @@ export default function FavoritesPage() {
                     <Card key={index} className="animate-pulse">
                       <CardBody className="p-4">
                         <div className="space-y-3">
-                          <div className="h-4 bg-default-200 rounded w-3/4"></div>
-                          <div className="h-3 bg-default-200 rounded w-1/2"></div>
-                          <div className="h-3 bg-default-200 rounded w-2/3"></div>
-                          <div className="h-2 bg-default-200 rounded w-full"></div>
-                          <div className="h-8 bg-default-200 rounded w-full"></div>
+                          <div className="h-4 bg-default-200 rounded w-3/4" />
+                          <div className="h-3 bg-default-200 rounded w-1/2" />
+                          <div className="h-3 bg-default-200 rounded w-2/3" />
+                          <div className="h-2 bg-default-200 rounded w-full" />
+                          <div className="h-8 bg-default-200 rounded w-full" />
                         </div>
                       </CardBody>
                     </Card>
@@ -139,17 +139,17 @@ export default function FavoritesPage() {
                             <h3 className="font-semibold text-sm truncate flex-1 pr-2">
                               {task.name}
                             </h3>
-                            <TaskStatusChip status={task.status} size="sm" />
+                            <TaskStatusChip size="sm" status={task.status} />
                           </div>
 
                           {/* 用户和时间信息 */}
                           <div className="space-y-1 text-xs text-default-500">
                             <div className="flex items-center">
-                              <Icon icon="solar:user-linear" className="w-3 h-3 mr-1" />
+                              <Icon className="w-3 h-3 mr-1" icon="solar:user-linear" />
                               <span className="truncate">{task.username}</span>
                             </div>
                             <div className="flex items-center">
-                              <Icon icon="solar:calendar-linear" className="w-3 h-3 mr-1" />
+                              <Icon className="w-3 h-3 mr-1" icon="solar:calendar-linear" />
                               <span>{formatTime(task.created_at)}</span>
                             </div>
                           </div>
@@ -163,7 +163,7 @@ export default function FavoritesPage() {
                               <span className="font-medium">{task.progress}%</span>
                             </div>
                             <Progress
-                              value={task.progress}
+                              className="w-full"
                               color={
                                 task.status === "completed"
                                   ? "success"
@@ -176,7 +176,7 @@ export default function FavoritesPage() {
                                         : "secondary"
                               }
                               size="sm"
-                              className="w-full"
+                              value={task.progress}
                             />
                           </div>
 
@@ -189,9 +189,9 @@ export default function FavoritesPage() {
                           <div className="flex items-center gap-2 pt-2 border-t border-default-100">
                             <Tooltip content="取消收藏">
                               <Button
+                                isIconOnly
                                 size="sm"
                                 variant="flat"
-                                isIconOnly
                                 onPress={async () => {
                                   try {
                                     await toggleTaskFavorite(task.id);
@@ -199,20 +199,21 @@ export default function FavoritesPage() {
                                     loadFavoriteTasks();
                                     toast.success("已取消收藏");
                                   } catch (error) {
+                                    // eslint-disable-next-line no-console
                                     console.error("取消收藏失败:", error);
                                     toast.error("操作失败");
                                   }
                                 }}
                               >
-                                <Icon icon="solar:star-bold" className="w-4 h-4 text-warning" />
+                                <Icon className="w-4 h-4 text-warning" icon="solar:star-bold" />
                               </Button>
                             </Tooltip>
 
                             <Tooltip content="复用任务参数">
                               <Button
+                                isIconOnly
                                 size="sm"
                                 variant="flat"
-                                isIconOnly
                                 onPress={async () => {
                                   try {
                                     // 获取任务详情
@@ -233,25 +234,26 @@ export default function FavoritesPage() {
                                     router.push("/model-testing/test");
                                     toast.success(`已选择复用任务: ${task.name}`);
                                   } catch (error) {
+                                    // eslint-disable-next-line no-console
                                     console.error("获取任务详情失败:", error);
                                     toast.error("无法获取任务参数");
                                   }
                                 }}
                               >
-                                <Icon icon="solar:copy-linear" className="w-4 h-4" />
+                                <Icon className="w-4 h-4" icon="solar:copy-linear" />
                               </Button>
                             </Tooltip>
 
                             <Tooltip content="查看详情">
                               <Button
+                                isIconOnly
                                 size="sm"
                                 variant="flat"
-                                isIconOnly
                                 onPress={() => {
                                   router.push(`/model-testing/history/${task.id}`);
                                 }}
                               >
-                                <Icon icon="solar:eye-linear" className="w-4 h-4" />
+                                <Icon className="w-4 h-4" icon="solar:eye-linear" />
                               </Button>
                             </Tooltip>
                           </div>
@@ -275,14 +277,14 @@ export default function FavoritesPage() {
             {totalPages > 1 && (
               <div className="flex justify-center">
                 <Pagination
-                  total={totalPages}
-                  page={currentPage}
-                  onChange={handlePageChange}
-                  boundaries={3}
                   isCompact
                   showControls
                   showShadow
+                  boundaries={3}
                   color="primary"
+                  page={currentPage}
+                  total={totalPages}
+                  onChange={handlePageChange}
                 />
               </div>
             )}

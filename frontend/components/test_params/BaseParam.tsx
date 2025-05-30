@@ -2,6 +2,7 @@
 
 import React, { ReactNode } from "react";
 import { Switch } from "@heroui/react";
+
 import { BaseParamProps, ParamValueType } from "./types";
 import { VariableValuesList } from "./VariableValuesList";
 
@@ -49,10 +50,10 @@ export const BaseParamComponent: React.FC<BaseParamComponentProps> = ({
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium w-24 flex-shrink-0">{label}</span>
           <Switch
-            size="sm"
-            isSelected={isVariable}
-            onValueChange={onVariableChange}
             isDisabled={disabled}
+            isSelected={isVariable}
+            size="sm"
+            onValueChange={onVariableChange}
           />
           <span className="text-xs text-default-500">变量</span>
         </div>
@@ -66,10 +67,10 @@ export const BaseParamComponent: React.FC<BaseParamComponentProps> = ({
       </div>
       {isVariable && (
         <VariableValuesList
-          values={values}
-          onChange={handleVariableValuesChange}
           defaultValue={defaultValue}
           renderInput={(value, index, onChange) => variableInputRenderer(value, onChange)}
+          values={values}
+          onChange={handleVariableValuesChange}
         />
       )}
     </div>

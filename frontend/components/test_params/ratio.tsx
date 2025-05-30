@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Select, SelectItem } from "@heroui/react";
+
 import { BaseParamComponent } from "./BaseParam";
 import { BaseParamProps, ParamValueType } from "./types";
 
@@ -38,12 +39,12 @@ export const RatioParam: React.FC<Partial<RatioParamProps>> = (props) => {
   ) => {
     return (
       <Select
-        size="sm"
+        aria-label="图像比例选择器"
+        className="w-full"
         placeholder="选择图像比例"
         selectedKeys={[currentValue?.toString() || "1:1"]}
+        size="sm"
         onChange={(e) => onValueChange(e.target.value)}
-        className="w-full"
-        aria-label="图像比例选择器"
       >
         {options.map((option) => (
           <SelectItem key={option.key}>{option.label}</SelectItem>
@@ -54,13 +55,13 @@ export const RatioParam: React.FC<Partial<RatioParamProps>> = (props) => {
 
   return (
     <BaseParamComponent
+      defaultValue="1:1"
+      isVariable={isVariable}
       label="比例"
+      renderInput={renderInput}
       value={value}
       onChange={onChange}
       onVariableChange={onVariableChange}
-      isVariable={isVariable}
-      renderInput={renderInput}
-      defaultValue="1:1"
       {...rest}
     />
   );

@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardBody, Spinner } from "@heroui/react";
 import { Icon } from "@iconify/react";
+
 import { getTasks } from "@/utils/apiClient";
-import { APIResponse } from "@/types/task";
 
 interface TaskStatsProps {
   refreshInterval?: number;
@@ -47,8 +47,8 @@ export const TaskStats: React.FC<TaskStatsProps> = ({ refreshInterval = 10000 })
       };
 
       setStats(newStats);
-    } catch (error) {
-      console.error("加载任务统计失败:", error);
+    } catch {
+      // 静默处理错误，避免控制台输出
     } finally {
       setLoading(false);
     }
@@ -60,6 +60,7 @@ export const TaskStats: React.FC<TaskStatsProps> = ({ refreshInterval = 10000 })
 
     if (refreshInterval > 0) {
       const interval = setInterval(loadStats, refreshInterval);
+
       return () => clearInterval(interval);
     }
   }, [refreshInterval]);
@@ -124,7 +125,7 @@ export const TaskStats: React.FC<TaskStatsProps> = ({ refreshInterval = 10000 })
       {statItems.map((item) => (
         <Card key={item.key} className="border-small">
           <CardBody className="text-center p-4">
-            <Icon icon={item.icon} className={`w-8 h-8 mx-auto mb-2 ${item.color}`} />
+            <Icon className={`w-8 h-8 mx-auto mb-2 ${item.color}`} icon={item.icon} />
             <div className="text-2xl font-bold mb-1">{item.value}</div>
             <div className="text-small text-default-500">{item.label}</div>
           </CardBody>

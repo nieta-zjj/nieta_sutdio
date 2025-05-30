@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Table,
   TableHeader,
@@ -26,10 +26,11 @@ import {
   Chip,
 } from "@heroui/react";
 import { Icon } from "@iconify/react";
+
 import { TaskStatusChip } from "@/components/task/task-status-chip";
 import { TaskProgressBar } from "@/components/task/task-progress-bar";
 import { getTasks, cancelTask, getTask } from "@/utils/apiClient";
-import { TaskListItem, TaskDetailResponse, APIResponse } from "@/types/task";
+import { TaskListItem, TaskDetailResponse, TaskListResponse, APIResponse } from "@/types/task";
 
 interface TaskListProps {
   showRunningOnly?: boolean;
@@ -58,37 +59,41 @@ export const TaskList: React.FC<TaskListProps> = ({
   };
 
   // 加载任务列表
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
+    setLoading(true);
+
     try {
-      const response: APIResponse<any> = await getTasks(
+      const response: APIResponse<TaskListResponse> = await getTasks(
         page,
         pageSize,
-        showRunningOnly ? "running" : statusFilter || undefined,
-        usernameFilter || undefined,
-        taskNameFilter || undefined
+        statusFilter,
+        usernameFilter,
+        taskNameFilter,
+        showRunningOnly
       );
 
       if (response.code === 200) {
         setTasks(response.data.tasks);
         setTotal(response.data.total);
       }
-    } catch (error) {
-      console.error("加载任务列表失败:", error);
+    } catch {
+      // 静默处理错误，避免控制台输出
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize, statusFilter, usernameFilter, taskNameFilter, showRunningOnly]);
 
   // 查看任务详情
   const handleViewTask = async (taskId: string) => {
     try {
       const response: APIResponse<TaskDetailResponse> = await getTask(taskId, true);
+
       if (response.code === 200) {
         setSelectedTask(response.data);
         onOpen();
       }
-    } catch (error) {
-      console.error("获取任务详情失败:", error);
+    } catch {
+      // 静默处理错误，避免控制台输出
     }
   };
 
@@ -97,8 +102,8 @@ export const TaskList: React.FC<TaskListProps> = ({
     try {
       await cancelTask(taskId);
       loadTasks(); // 重新加载列表
-    } catch (error) {
-      console.error("取消任务失败:", error);
+    } catch {
+      // 静默处理错误，避免控制台输出
     }
   };
 
@@ -108,9 +113,10 @@ export const TaskList: React.FC<TaskListProps> = ({
 
     if (refreshInterval > 0) {
       const interval = setInterval(loadTasks, refreshInterval);
+
       return () => clearInterval(interval);
     }
-  }, [page, statusFilter, usernameFilter, taskNameFilter, showRunningOnly]);
+  }, [loadTasks, refreshInterval]);
 
   const columns = [
     { key: "name", label: "任务名称" },
@@ -138,11 +144,11 @@ export const TaskList: React.FC<TaskListProps> = ({
         return (
           <div className="w-32">
             <TaskProgressBar
-              progress={task.progress}
               processedImages={task.processed_images}
-              totalImages={task.total_images}
-              size="sm"
+              progress={task.progress}
               showLabel={false}
+              size="sm"
+              totalImages={task.total_images}
             />
             <span className="text-tiny text-default-400">
               {task.processed_images}/{task.total_images}
@@ -156,19 +162,19 @@ export const TaskList: React.FC<TaskListProps> = ({
           <div className="flex gap-2">
             <Tooltip content="查看详情">
               <Button isIconOnly size="sm" variant="light" onPress={() => handleViewTask(task.id)}>
-                <Icon icon="solar:eye-linear" className="w-4 h-4" />
+                <Icon className="w-4 h-4" icon="solar:eye-linear" />
               </Button>
             </Tooltip>
             {(task.status === "pending" || task.status === "running") && (
               <Tooltip content="取消任务">
                 <Button
                   isIconOnly
+                  color="danger"
                   size="sm"
                   variant="light"
-                  color="danger"
                   onPress={() => handleCancelTask(task.id)}
                 >
-                  <Icon icon="solar:stop-linear" className="w-4 h-4" />
+                  <Icon className="w-4 h-4" icon="solar:stop-linear" />
                 </Button>
               </Tooltip>
             )}
@@ -188,12 +194,13 @@ export const TaskList: React.FC<TaskListProps> = ({
             <div className="flex flex-col gap-4">
               <div className="flex gap-4 items-end flex-wrap">
                 <Select
+                  className="w-48"
                   label="状态筛选"
                   placeholder="选择状态"
-                  className="w-48"
                   selectedKeys={statusFilter ? [statusFilter] : []}
                   onSelectionChange={(keys) => {
                     const selected = Array.from(keys)[0] as string;
+
                     setStatusFilter(selected || "");
                   }}
                 >
@@ -206,34 +213,34 @@ export const TaskList: React.FC<TaskListProps> = ({
                 </Select>
 
                 <Input
+                  isClearable
+                  className="w-48"
                   label="用户筛选"
                   placeholder="输入用户名"
-                  className="w-48"
                   value={usernameFilter}
                   onChange={(e) => setUsernameFilter(e.target.value)}
-                  isClearable
                 />
 
                 <Input
+                  isClearable
+                  className="w-48"
                   label="任务名搜索"
                   placeholder="输入任务名关键词"
-                  className="w-48"
-                  value={taskNameFilter}
-                  onChange={(e) => setTaskNameFilter(e.target.value)}
-                  isClearable
                   startContent={
                     <Icon
-                      icon="solar:magnifying-glass-linear"
                       className="w-4 h-4 text-default-400"
+                      icon="solar:magnifying-glass-linear"
                     />
                   }
+                  value={taskNameFilter}
+                  onChange={(e) => setTaskNameFilter(e.target.value)}
                 />
 
                 <Button
                   color="primary"
+                  startContent={<Icon icon="solar:refresh-linear" />}
                   variant="flat"
                   onPress={loadTasks}
-                  startContent={<Icon icon="solar:refresh-linear" />}
                 >
                   刷新
                 </Button>
@@ -284,10 +291,10 @@ export const TaskList: React.FC<TaskListProps> = ({
               {(column) => <TableColumn key={column.key}>{column.label}</TableColumn>}
             </TableHeader>
             <TableBody
-              items={tasks}
-              isLoading={loading}
-              loadingContent={<Spinner label="加载中..." />}
               emptyContent="暂无任务"
+              isLoading={loading}
+              items={tasks}
+              loadingContent={<Spinner label="加载中..." />}
             >
               {(task) => (
                 <TableRow key={task.id}>
@@ -303,18 +310,18 @@ export const TaskList: React.FC<TaskListProps> = ({
       {total > pageSize && (
         <div className="flex justify-center">
           <Pagination
-            total={Math.ceil(total / pageSize)}
-            page={page}
-            onChange={setPage}
-            boundaries={3}
             isCompact
             showControls
+            boundaries={3}
+            page={page}
+            total={Math.ceil(total / pageSize)}
+            onChange={setPage}
           />
         </div>
       )}
 
       {/* 任务详情模态框 */}
-      <Modal isOpen={isOpen} onClose={onClose} size="2xl" scrollBehavior="inside">
+      <Modal isOpen={isOpen} scrollBehavior="inside" size="2xl" onClose={onClose}>
         <ModalContent>
           <ModalHeader>
             <div className="flex items-center gap-2">
@@ -350,8 +357,8 @@ export const TaskList: React.FC<TaskListProps> = ({
                   <span className="text-small text-default-500">进度</span>
                   <div className="mt-2">
                     <TaskProgressBar
-                      progress={selectedTask.progress}
                       processedImages={selectedTask.processed_images}
+                      progress={selectedTask.progress}
                       totalImages={selectedTask.total_images}
                     />
                   </div>
@@ -387,7 +394,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                           className="flex items-center justify-between p-2 bg-default-50 rounded"
                         >
                           <span className="text-small">{subtask.id.slice(0, 8)}...</span>
-                          <TaskStatusChip status={subtask.status} size="sm" />
+                          <TaskStatusChip size="sm" status={subtask.status} />
                         </div>
                       ))}
                     </div>

@@ -27,6 +27,7 @@ export const CustomProgress: React.FC<CustomProgressProps> = ({
     if (sizeValue === "sm") return "h-1";
     if (sizeValue === "md") return "h-2";
     if (sizeValue === "lg") return "h-3";
+
     return "h-1"; // 默认值
   };
 

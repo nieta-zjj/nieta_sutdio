@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardBody, Chip, Spinner } from "@heroui/react";
 import { Icon } from "@iconify/react";
+
 import { getRunningTasks } from "@/utils/apiClient";
 import { RunningTasksResponse, APIResponse } from "@/types/task";
 
@@ -20,11 +21,12 @@ export const RunningTasksOverview: React.FC<RunningTasksOverviewProps> = ({
   const loadRunningTasks = async () => {
     try {
       const response: APIResponse<RunningTasksResponse> = await getRunningTasks();
+
       if (response.code === 200) {
         setRunningTasks(response.data);
       }
-    } catch (error) {
-      console.error("加载运行中任务失败:", error);
+    } catch {
+      // 静默处理错误，避免控制台输出
     } finally {
       setLoading(false);
     }
@@ -36,6 +38,7 @@ export const RunningTasksOverview: React.FC<RunningTasksOverviewProps> = ({
 
     if (refreshInterval > 0) {
       const interval = setInterval(loadRunningTasks, refreshInterval);
+
       return () => clearInterval(interval);
     }
   }, [refreshInterval]);
@@ -60,7 +63,7 @@ export const RunningTasksOverview: React.FC<RunningTasksOverviewProps> = ({
       <CardBody>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Icon icon="solar:play-circle-linear" className="w-5 h-5 text-primary" />
+            <Icon className="w-5 h-5 text-primary" icon="solar:play-circle-linear" />
             <span className="font-semibold">运行中任务概览</span>
           </div>
           <Chip color="primary" variant="flat">
@@ -70,7 +73,7 @@ export const RunningTasksOverview: React.FC<RunningTasksOverviewProps> = ({
 
         {!runningTasks || runningTasks.count === 0 ? (
           <div className="text-center py-8 text-default-400">
-            <Icon icon="solar:sleep-linear" className="w-12 h-12 mx-auto mb-2" />
+            <Icon className="w-12 h-12 mx-auto mb-2" icon="solar:sleep-linear" />
             <p>当前没有运行中的任务</p>
           </div>
         ) : (
@@ -92,7 +95,7 @@ export const RunningTasksOverview: React.FC<RunningTasksOverviewProps> = ({
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Icon icon="solar:refresh-linear" className="w-4 h-4 text-primary animate-spin" />
+                  <Icon className="w-4 h-4 text-primary animate-spin" icon="solar:refresh-linear" />
                 </div>
               </div>
             ))}

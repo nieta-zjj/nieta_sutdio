@@ -1,6 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import type {
+  TaskDetailResponse,
+  MatrixData,
+  TableCellData,
+  TableRowData,
+  DimensionFilter,
+} from "@/types/task";
+
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Card,
   CardBody,
@@ -16,9 +24,6 @@ import {
   ModalBody,
   ModalFooter,
   Image,
-  Slider,
-  Tabs,
-  Tab,
 } from "@heroui/react";
 import { Icon } from "@iconify/react";
 import { useRouter, useParams } from "next/navigation";
@@ -32,23 +37,12 @@ import {
   addSubtaskEvaluation,
   removeSubtaskEvaluation,
 } from "@/utils/apiClient";
-import { SubtaskResponse } from "@/types/task";
 import { TaskStatusChip } from "@/components/task/task-status-chip";
 import { CustomProgress } from "@/components/ui/custom-progress";
 import SimpleTableView from "@/components/history/SimpleTableView";
 
 // 导入简单表格样式
 import "@/styles/simple-table.css";
-
-// 导入类型定义
-import type {
-  APIResponse,
-  TaskDetailResponse,
-  MatrixData,
-  TableCellData,
-  TableRowData,
-  DimensionFilter,
-} from "@/types/task";
 
 // 占位图片URL
 const PLACEHOLDER_IMAGE_URL = "/placeholder-image.png";
@@ -58,6 +52,7 @@ const getResizedImageUrl = (url: string, size: number): string => {
   if (!url) return url;
   if (url.includes("x-oss-process=")) return url;
   const separator = url.includes("?") ? "&" : "?";
+
   return `${url}${separator}x-oss-process=image/resize,l_${size}/quality,q_80/format,webp`;
 };
 
@@ -77,7 +72,6 @@ export default function TaskDetailPage() {
 
   // 矩阵数据和表格状态
   const [matrixData, setMatrixData] = useState<MatrixData | null>(null);
-  const [matrixLoading, setMatrixLoading] = useState(false);
   const [xAxis, setXAxis] = useState<string | null>(null);
   const [yAxis, setYAxis] = useState<string | null>(null);
   const [availableVariables, setAvailableVariables] = useState<string[]>([]);
@@ -86,7 +80,7 @@ export default function TaskDetailPage() {
   const [filterableDimensions, setFilterableDimensions] = useState<string[]>([]);
   const [tableData, setTableData] = useState<TableRowData[]>([]);
   const [tableScale, setTableScale] = useState<number>(100);
-  const [hasBatchTag, setHasBatchTag] = useState<boolean>(false);
+  const [hasBatchTag] = useState<boolean>(false);
 
   // 全屏和图片预览状态
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -124,6 +118,7 @@ export default function TaskDetailPage() {
     if (imageCount <= 4) return "grid-cols-2";
     if (imageCount <= 9) return "grid-cols-3";
     if (imageCount <= 16) return "grid-cols-4";
+
     return "grid-cols-5";
   };
 
@@ -133,172 +128,176 @@ export default function TaskDetailPage() {
     if (imageCount <= 4) return 360;
     if (imageCount <= 9) return 240;
     if (imageCount <= 16) return 180;
+
     return 120;
   };
 
   // 加载任务详情
-  const loadTaskDetail = async () => {
+  const loadTaskDetail = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const response = await getTask(taskId, true);
+
       setTask(response.data);
-    } catch (err) {
-      console.error("加载任务详情失败:", err);
+    } catch {
       setError("加载任务详情失败");
       toast.error("加载任务详情失败");
     } finally {
       setLoading(false);
     }
-  };
+  }, [taskId]);
 
   // 加载矩阵数据
-  const loadMatrixData = async (forceRefresh = false) => {
-    if (dataLoadedRef.current && !forceRefresh) return;
+  const loadMatrixData = useCallback(
+    async (forceRefresh = false) => {
+      if (dataLoadedRef.current && !forceRefresh) return;
 
-    try {
-      setMatrixLoading(true);
-      const response = await getTaskMatrix(taskId);
-      const data = response.data as MatrixData;
+      try {
+        const response = await getTaskMatrix(taskId);
+        const data = response.data as MatrixData;
 
-      setMatrixData(data);
+        setMatrixData(data);
 
-      // 处理变量数据
-      if (data.variables_map) {
-        const variables = Object.keys(data.variables_map).filter((key) => {
-          const variable = data.variables_map![key];
-          return variable.name && variable.name.trim() !== "";
-        });
+        // 处理变量数据
+        if (data.variables_map) {
+          const variables = Object.keys(data.variables_map).filter((key) => {
+            const variable = data.variables_map![key];
 
-        setAvailableVariables(variables);
-
-        const names: Record<string, string> = {};
-        variables.forEach((key) => {
-          const variable = data.variables_map![key];
-          names[key] = variable.name || key;
-        });
-        setVariableNames(names);
-
-        // 设置默认的X和Y轴
-        if (variables.length >= 2 && !xAxis && !yAxis) {
-          setXAxis(variables[0]);
-          setYAxis(variables[1]);
-        } else if (variables.length === 1 && !xAxis && !yAxis) {
-          // 对于单变量任务，默认选择X轴
-          setXAxis(variables[0]);
-        }
-
-        // 分析坐标键来检测其他变化的维度
-        const existingKeys = Object.keys(data.coordinates_by_indices || {});
-        const sampleKey = existingKeys[0];
-        const totalDimensions = sampleKey ? sampleKey.split(",").length : 0;
-
-        console.log("坐标键分析:", {
-          totalKeys: existingKeys.length,
-          sampleKey,
-          totalDimensions,
-          availableVariables: variables.length,
-        });
-
-        // 设置可筛选的维度（除了X和Y轴的其他维度）
-        const currentXDim = xAxis ? parseInt(xAxis.substring(1)) : -1;
-        const currentYDim = yAxis ? parseInt(yAxis.substring(1)) : -1;
-
-        // 基于总维度数量和已有变量创建可筛选维度列表
-        const allFilterableDimensions = new Set<string>();
-
-        // 添加variables_map中的维度（除了当前选择的X/Y轴）
-        variables
-          .filter((v) => v !== xAxis && v !== yAxis)
-          .forEach((v) => {
-            allFilterableDimensions.add(v);
+            return variable.name && variable.name.trim() !== "";
           });
 
-        // 添加其他可能的维度（基于坐标键的总维度数）
-        for (let i = 0; i < totalDimensions; i++) {
-          const dimKey = `v${i}`;
-          if (i !== currentXDim && i !== currentYDim) {
-            allFilterableDimensions.add(dimKey);
+          setAvailableVariables(variables);
+
+          const names: Record<string, string> = {};
+
+          variables.forEach((key) => {
+            const variable = data.variables_map![key];
+
+            names[key] = variable.name || key;
+          });
+          setVariableNames(names);
+
+          // 设置默认的X和Y轴
+          if (variables.length >= 2 && !xAxis && !yAxis) {
+            setXAxis(variables[0]);
+            setYAxis(variables[1]);
+          } else if (variables.length === 1 && !xAxis && !yAxis) {
+            // 对于单变量任务，默认选择X轴
+            setXAxis(variables[0]);
           }
-        }
 
-        const filterable = Array.from(allFilterableDimensions);
-        setFilterableDimensions(filterable);
+          // 分析坐标键来检测其他变化的维度
+          const existingKeys = Object.keys(data.coordinates_by_indices || {});
+          const sampleKey = existingKeys[0];
+          const totalDimensions = sampleKey ? sampleKey.split(",").length : 0;
 
-        // 为每个可筛选维度创建变量信息（如果不存在的话）
-        const extendedVariableNames = { ...names };
-        filterable.forEach((dimension) => {
-          if (!extendedVariableNames[dimension]) {
+          // 设置可筛选的维度（除了X和Y轴的其他维度）
+          const currentXDim = xAxis ? parseInt(xAxis.substring(1)) : -1;
+          const currentYDim = yAxis ? parseInt(yAxis.substring(1)) : -1;
+
+          // 基于总维度数量和已有变量创建可筛选维度列表
+          const allFilterableDimensions = new Set<string>();
+
+          // 添加variables_map中的维度（除了当前选择的X/Y轴）
+          variables
+            .filter((v) => v !== xAxis && v !== yAxis)
+            .forEach((v) => {
+              allFilterableDimensions.add(v);
+            });
+
+          // 添加其他可能的维度（基于坐标键的总维度数）
+          for (let i = 0; i < totalDimensions; i++) {
+            const dimKey = `v${i}`;
+
+            if (i !== currentXDim && i !== currentYDim) {
+              allFilterableDimensions.add(dimKey);
+            }
+          }
+
+          const filterable = Array.from(allFilterableDimensions);
+
+          setFilterableDimensions(filterable);
+
+          // 为每个可筛选维度创建变量信息（如果不存在的话）
+          const extendedVariableNames = { ...names };
+
+          filterable.forEach((dimension) => {
+            if (!extendedVariableNames[dimension]) {
+              const dimIndex = parseInt(dimension.substring(1));
+              // 从坐标键中分析这个维度的可用值
+              const dimensionValues = new Set<number>();
+
+              existingKeys.forEach((key) => {
+                const coords = key.split(",").map((c) => parseInt(c));
+
+                if (coords[dimIndex] !== undefined && coords[dimIndex] !== -1) {
+                  dimensionValues.add(coords[dimIndex]);
+                }
+              });
+              const availableValues = Array.from(dimensionValues).sort((a, b) => a - b);
+
+              extendedVariableNames[dimension] =
+                `维度${dimIndex} (${availableValues.length}个选项)`;
+            }
+          });
+          setVariableNames(extendedVariableNames);
+
+          // 初始化筛选器（每个维度选择第一个可用值）
+          const defaultFilters = filterable.map((dimension) => {
             const dimIndex = parseInt(dimension.substring(1));
-            // 从坐标键中分析这个维度的可用值
+            // 从坐标键中获取这个维度的第一个可用值
             const dimensionValues = new Set<number>();
+
             existingKeys.forEach((key) => {
               const coords = key.split(",").map((c) => parseInt(c));
+
               if (coords[dimIndex] !== undefined && coords[dimIndex] !== -1) {
                 dimensionValues.add(coords[dimIndex]);
               }
             });
             const availableValues = Array.from(dimensionValues).sort((a, b) => a - b);
-            extendedVariableNames[dimension] = `维度${dimIndex} (${availableValues.length}个选项)`;
-          }
-        });
-        setVariableNames(extendedVariableNames);
 
-        // 初始化筛选器（每个维度选择第一个可用值）
-        const defaultFilters = filterable.map((dimension) => {
-          const dimIndex = parseInt(dimension.substring(1));
-          // 从坐标键中获取这个维度的第一个可用值
-          const dimensionValues = new Set<number>();
-          existingKeys.forEach((key) => {
-            const coords = key.split(",").map((c) => parseInt(c));
-            if (coords[dimIndex] !== undefined && coords[dimIndex] !== -1) {
-              dimensionValues.add(coords[dimIndex]);
-            }
+            return {
+              dimension,
+              valueIndex: availableValues.length > 0 ? availableValues[0] : 0,
+            };
           });
-          const availableValues = Array.from(dimensionValues).sort((a, b) => a - b);
-          return {
-            dimension,
-            valueIndex: availableValues.length > 0 ? availableValues[0] : 0,
-          };
-        });
-        setDimensionFilters(defaultFilters);
-      }
 
-      dataLoadedRef.current = true;
-    } catch (err) {
-      console.error("加载矩阵数据失败:", err);
-      setError("加载矩阵数据失败");
-    } finally {
-      setMatrixLoading(false);
-    }
-  };
+          setDimensionFilters(defaultFilters);
+        }
+
+        dataLoadedRef.current = true;
+      } catch {
+        setError("加载矩阵数据失败");
+      }
+    },
+    [taskId]
+  );
 
   // 生成表格数据的函数
   const generateTableData = useCallback(() => {
     if (!matrixData || !matrixData.coordinates_by_indices) {
       setTableData([]);
+
       return;
     }
 
     // 分析可用的坐标数据，构建空间坐标系统
     const coordinateKeys = Object.keys(matrixData.coordinates_by_indices);
+
     if (coordinateKeys.length === 0) {
       setTableData([]);
+
       return;
     }
 
-    console.log("构建空间坐标系统...");
-    console.log("可用坐标键:", coordinateKeys.slice(0, 10)); // 显示前10个作为示例
-
-    // 解析坐标空间的维度结构
-    const sampleKey = coordinateKeys[0];
-    const totalDimensions = sampleKey ? sampleKey.split(",").length : 0;
-    console.log("检测到的坐标空间维度数:", totalDimensions);
-
     // 分析每个维度的可用值范围
     const dimensionRanges: Record<number, Set<number>> = {};
+
     coordinateKeys.forEach((key) => {
       const coords = key.split(",").map((c) => parseInt(c));
+
       coords.forEach((coord, dimIndex) => {
         if (!isNaN(coord) && coord >= 0) {
           // 只考虑有效的坐标值
@@ -310,20 +309,14 @@ export default function TaskDetailPage() {
       });
     });
 
-    console.log("空间坐标系统维度分析:");
-    Object.entries(dimensionRanges).forEach(([dimIndex, values]) => {
-      const sortedValues = Array.from(values).sort((a, b) => a - b);
-      console.log(`  维度${dimIndex}: [${sortedValues.join(", ")}] (${sortedValues.length}个值)`);
-    });
-
     // 获取X轴和Y轴的变量信息
     const xVariable = xAxis ? matrixData.variables_map?.[xAxis] : null;
     const yVariable = yAxis ? matrixData.variables_map?.[yAxis] : null;
 
     // 至少需要一个有效的变量进行表格显示
     if (!xVariable && !yVariable) {
-      console.log("未选择有效的X轴或Y轴变量");
       setTableData([]);
+
       return;
     }
 
@@ -339,8 +332,10 @@ export default function TaskDetailPage() {
     } => {
       // 构建目标坐标键 - 只包含有效的坐标维度
       const coordPairs: [number, number][] = [];
+
       Object.entries(targetCoords).forEach(([varKey, index]) => {
         const dimIndex = parseInt(varKey.substring(1)); // v0 -> 0, v1 -> 1
+
         coordPairs.push([dimIndex, index]);
       });
 
@@ -348,6 +343,7 @@ export default function TaskDetailPage() {
       dimensionFilters.forEach((filter) => {
         if (filter.valueIndex !== null) {
           const dimIndex = parseInt(filter.dimension.substring(1));
+
           coordPairs.push([dimIndex, filter.valueIndex]);
         }
       });
@@ -357,8 +353,10 @@ export default function TaskDetailPage() {
 
       // 构建简化坐标键（只包含连续的有效维度）
       const coordValues: string[] = [];
+
       for (let i = 0; i < coordPairs.length; i++) {
         const [dimIndex, value] = coordPairs[i];
+
         // 确保维度是连续的（从0开始）
         if (dimIndex === i) {
           coordValues.push(value.toString());
@@ -383,9 +381,7 @@ export default function TaskDetailPage() {
         // 检查是否是错误类型
         if (url.startsWith("ERROR: ")) {
           const errorMessage = url.substring(7); // 移除 "ERROR: " 前缀
-          console.log(
-            `坐标查找: ${JSON.stringify(targetCoords)} -> ${coordinateKey} -> 错误: ${errorMessage.substring(0, 50)}...`
-          );
+
           return {
             url: "",
             isError: true,
@@ -395,9 +391,6 @@ export default function TaskDetailPage() {
           };
         }
 
-        console.log(
-          `坐标查找: ${JSON.stringify(targetCoords)} -> ${coordinateKey} -> ${url ? "找到" : "未找到"}`
-        );
         return {
           url,
           isError: false,
@@ -410,8 +403,10 @@ export default function TaskDetailPage() {
       if (typeof foundData === "string") {
         if (foundData.startsWith("ERROR: ")) {
           const errorMessage = foundData.substring(7);
+
           return { url: "", isError: true, errorMessage };
         }
+
         return { url: foundData, isError: false };
       }
 
@@ -423,7 +418,6 @@ export default function TaskDetailPage() {
     // 降维显示逻辑：根据选择的XY轴生成二维表格
     if (xVariable && !yVariable) {
       // 单维度表格：只有X轴
-      console.log("构建单维度表格 (仅X轴)");
       const row: TableRowData = {
         key: "single-row",
         rowTitle: "结果",
@@ -457,7 +451,6 @@ export default function TaskDetailPage() {
       newTableData.push(row);
     } else if (yVariable && !xVariable) {
       // 单维度表格：只有Y轴
-      console.log("构建单维度表格 (仅Y轴)");
       yVariable.values.forEach((yValue, yIndex) => {
         const yDimension = parseInt(yAxis!.substring(1));
         const targetCoords = { [`v${yDimension}`]: yIndex };
@@ -490,7 +483,6 @@ export default function TaskDetailPage() {
       });
     } else if (xVariable && yVariable) {
       // 二维表格：XY轴降维显示
-      console.log("构建二维表格 (XY轴降维)");
       const xDimension = parseInt(xAxis!.substring(1));
       const yDimension = parseInt(yAxis!.substring(1));
 
@@ -532,34 +524,6 @@ export default function TaskDetailPage() {
       });
     }
 
-    // 输出表格构建结果
-    console.log("空间坐标系统表格构建完成:");
-    console.log(`- 总维度数: ${totalDimensions}`);
-    console.log(
-      `- X轴维度: ${xAxis ? `${xAxis} (维度${parseInt(xAxis.substring(1))})` : "未选择"}`
-    );
-    console.log(
-      `- Y轴维度: ${yAxis ? `${yAxis} (维度${parseInt(yAxis.substring(1))})` : "未选择"}`
-    );
-    console.log(`- 生成行数: ${newTableData.length}`);
-    console.log(`- 可用坐标数: ${coordinateKeys.length}`);
-
-    // 统计有效图片数量
-    let validImageCount = 0;
-    newTableData.forEach((row) => {
-      Object.entries(row).forEach(([key, value]) => {
-        if (
-          key !== "key" &&
-          key !== "rowTitle" &&
-          typeof value === "object" &&
-          value.hasValidImage
-        ) {
-          validImageCount++;
-        }
-      });
-    });
-    console.log(`- 有效图片数: ${validImageCount}`);
-
     setTableData(newTableData);
   }, [matrixData, xAxis, yAxis, dimensionFilters]);
 
@@ -574,6 +538,7 @@ export default function TaskDetailPage() {
 
     // 如果有子任务ID，加载评分和评价
     const subtaskId = (cellData as any)?.subtaskId;
+
     if (subtaskId) {
       loadSubtaskRatingAndEvaluation(subtaskId);
     } else {
@@ -590,6 +555,7 @@ export default function TaskDetailPage() {
   ) => {
     if (!hasBatchTag || urls.length <= 1) {
       viewImageInModal(urls[0], title, cellData);
+
       return;
     }
 
@@ -602,6 +568,7 @@ export default function TaskDetailPage() {
 
     // 如果有子任务ID，加载评分和评价
     const subtaskId = (cellData as any)?.subtaskId;
+
     if (subtaskId) {
       loadSubtaskRatingAndEvaluation(subtaskId);
     } else {
@@ -615,10 +582,10 @@ export default function TaskDetailPage() {
   const loadSubtaskRatingAndEvaluation = async (subtaskId: string) => {
     try {
       const response = await getSubtaskRating(subtaskId);
+
       setCurrentRating(response.data.rating || 0);
       setCurrentEvaluations(response.data.evaluation || []);
-    } catch (error) {
-      console.error("加载子任务评分和评价失败:", error);
+    } catch {
       toast.error("加载评分和评价失败");
     }
   };
@@ -626,8 +593,10 @@ export default function TaskDetailPage() {
   // 保存评分的函数
   const saveRating = async (rating: number) => {
     const subtaskId = (currentCellData as any)?.subtaskId;
+
     if (!subtaskId) {
       toast.error("无法获取子任务ID");
+
       return;
     }
 
@@ -635,8 +604,7 @@ export default function TaskDetailPage() {
       await updateSubtaskRating(subtaskId, rating);
       setCurrentRating(rating);
       toast.success(`评分已保存: ${rating}星`);
-    } catch (error) {
-      console.error("保存评分失败:", error);
+    } catch {
       toast.error("保存评分失败");
     }
   };
@@ -644,8 +612,10 @@ export default function TaskDetailPage() {
   // 添加评价的函数
   const addEvaluation = async () => {
     const subtaskId = (currentCellData as any)?.subtaskId;
+
     if (!subtaskId) {
       toast.error("无法获取子任务ID");
+
       return;
     }
 
@@ -655,11 +625,11 @@ export default function TaskDetailPage() {
 
     try {
       const response = await addSubtaskEvaluation(subtaskId, newEvaluation.trim());
+
       setCurrentEvaluations(response.data.evaluation);
       setNewEvaluation("");
       toast.success("评价已添加");
-    } catch (error) {
-      console.error("添加评价失败:", error);
+    } catch {
       toast.error("添加评价失败");
     }
   };
@@ -667,17 +637,19 @@ export default function TaskDetailPage() {
   // 删除评价的函数
   const removeEvaluation = async (index: number) => {
     const subtaskId = (currentCellData as any)?.subtaskId;
+
     if (!subtaskId) {
       toast.error("无法获取子任务ID");
+
       return;
     }
 
     try {
       const response = await removeSubtaskEvaluation(subtaskId, index);
+
       setCurrentEvaluations(response.data.evaluation);
       toast.success("评价已删除");
-    } catch (error) {
-      console.error("删除评价失败:", error);
+    } catch {
       toast.error("删除评价失败");
     }
   };
@@ -685,33 +657,15 @@ export default function TaskDetailPage() {
   // 处理维度筛选变化
   const handleDimensionFilterChange = (dimension: string, valueIndex: number | null) => {
     setDimensionFilters((prev) => {
-      const updated = prev.map((filter) =>
+      return prev.map((filter) =>
         filter.dimension === dimension ? { ...filter, valueIndex } : filter
       );
-      return updated;
     });
   };
 
   // 处理缩放变更
   const handleScaleChange = (newScale: number) => {
     setTableScale(newScale);
-  };
-
-  // 全屏切换
-  const toggleFullscreen = () => {
-    if (!isFullscreen) {
-      // 进入全屏
-      if (fullscreenElementRef.current) {
-        if (fullscreenElementRef.current.requestFullscreen) {
-          fullscreenElementRef.current.requestFullscreen();
-        }
-      }
-    } else {
-      // 退出全屏
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      }
-    }
   };
 
   // 监听全屏状态变化
@@ -721,6 +675,7 @@ export default function TaskDetailPage() {
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
+
     return () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
@@ -732,7 +687,7 @@ export default function TaskDetailPage() {
       loadTaskDetail();
       loadMatrixData();
     }
-  }, [taskId]);
+  }, [taskId, loadTaskDetail, loadMatrixData]);
 
   // 当轴或筛选条件变化时重新生成表格数据
   useEffect(() => {
@@ -742,6 +697,7 @@ export default function TaskDetailPage() {
   // 更新可筛选维度和重置筛选器
   useEffect(() => {
     const filterable = availableVariables.filter((v) => v !== xAxis && v !== yAxis);
+
     setFilterableDimensions(filterable);
 
     // 当XY轴变化时，重置筛选器以确保表格正确刷新
@@ -751,24 +707,26 @@ export default function TaskDetailPage() {
         const dimIndex = parseInt(dimension.substring(1));
         // 从坐标键中获取这个维度的第一个可用值
         const dimensionValues = new Set<number>();
+
         existingKeys.forEach((key) => {
           const coords = key.split(",").map((c) => parseInt(c));
+
           if (coords[dimIndex] !== undefined && coords[dimIndex] !== -1) {
             dimensionValues.add(coords[dimIndex]);
           }
         });
         const availableValues = Array.from(dimensionValues).sort((a, b) => a - b);
+
         return {
           dimension,
           valueIndex: availableValues.length > 0 ? availableValues[0] : 0,
         };
       });
+
       setDimensionFilters(defaultFilters);
 
       // 清空URL缓存，确保重新计算坐标
       urlCache.current = {};
-
-      console.log(`轴变化触发重置: X=${xAxis}, Y=${yAxis}, 筛选器=${defaultFilters.length}个`);
     }
   }, [availableVariables, xAxis, yAxis, matrixData]);
 
@@ -787,14 +745,14 @@ export default function TaskDetailPage() {
         {[1, 2, 3, 4, 5].map((star) => (
           <Icon
             key={star}
-            icon="solar:star-bold"
-            width={20}
             className={`cursor-pointer transition-colors ${
               star <= (hoverRating || rating) ? "text-warning-400" : "text-default-300"
             }`}
+            icon="solar:star-bold"
+            width={20}
+            onClick={() => onRatingChange(star)}
             onMouseEnter={() => setHoverRating(star)}
             onMouseLeave={() => setHoverRating(0)}
-            onClick={() => onRatingChange(star)}
           />
         ))}
         <span className="text-sm text-default-500 ml-2">
@@ -819,7 +777,7 @@ export default function TaskDetailPage() {
     return (
       <div className="w-full h-full flex items-center justify-center">
         <div className="text-center">
-          <Icon icon="solar:file-text-linear" className="w-16 h-16 mx-auto mb-4 text-default-400" />
+          <Icon className="w-16 h-16 mx-auto mb-4 text-default-400" icon="solar:file-text-linear" />
           <p className="text-lg text-default-600 mb-2">加载失败</p>
           <p className="text-sm text-default-400 mb-4">{error || "任务不存在"}</p>
           <Button color="primary" onPress={() => router.back()}>
@@ -837,8 +795,8 @@ export default function TaskDetailPage() {
         <div className="flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-4">
             <Button
-              variant="flat"
               startContent={<Icon icon="solar:arrow-left-linear" />}
+              variant="flat"
               onPress={() => router.back()}
             >
               返回
@@ -851,8 +809,8 @@ export default function TaskDetailPage() {
           <div className="flex items-center gap-2">
             <TaskStatusChip status={task.status} />
             <Button
-              variant="flat"
               startContent={<Icon icon="solar:refresh-linear" />}
+              variant="flat"
               onPress={() => {
                 loadTaskDetail();
                 loadMatrixData(true);
@@ -869,9 +827,9 @@ export default function TaskDetailPage() {
             <div className="flex items-center justify-between w-full">
               <h3 className="text-lg font-medium">基本信息</h3>
               <Button
+                isIconOnly
                 size="sm"
                 variant="light"
-                isIconOnly
                 onPress={() => setIsTaskInfoCollapsed(!isTaskInfoCollapsed)}
               >
                 <Icon
@@ -905,11 +863,11 @@ export default function TaskDetailPage() {
               </div>
 
               <CustomProgress
-                total={task.total_images}
+                className="w-full"
                 completed={task.processed_images}
                 failed={0}
                 size="md"
-                className="w-full"
+                total={task.total_images}
               />
             </CardBody>
           )}
@@ -925,9 +883,9 @@ export default function TaskDetailPage() {
                   轴向设置
                 </h3>
                 <Button
+                  isIconOnly
                   size="sm"
                   variant="light"
-                  isIconOnly
                   onPress={() => setIsSettingsCollapsed(!isSettingsCollapsed)}
                 >
                   <Icon
@@ -951,8 +909,10 @@ export default function TaskDetailPage() {
                     selectedKeys={xAxis ? [xAxis] : []}
                     onSelectionChange={(keys) => {
                       const keysArray = Array.from(keys);
+
                       if (keysArray.length > 0) {
                         const newXAxis = keysArray[0] as string;
+
                         if (newXAxis === yAxis) {
                           setYAxis("");
                         }
@@ -975,8 +935,10 @@ export default function TaskDetailPage() {
                     selectedKeys={yAxis ? [yAxis] : []}
                     onSelectionChange={(keys) => {
                       const keysArray = Array.from(keys);
+
                       if (keysArray.length > 0) {
                         const newYAxis = keysArray[0] as string;
+
                         if (newYAxis === xAxis) {
                           setXAxis("");
                         }
@@ -1025,8 +987,10 @@ export default function TaskDetailPage() {
                               }
                               onSelectionChange={(keys) => {
                                 const keysArray = Array.from(keys);
+
                                 if (keysArray.length > 0) {
                                   const valueIndex = parseInt(keysArray[0] as string);
+
                                   handleDimensionFilterChange(dimension, valueIndex);
                                 }
                               }}
@@ -1045,6 +1009,7 @@ export default function TaskDetailPage() {
 
                         existingKeys.forEach((key) => {
                           const coords = key.split(",").map((c) => parseInt(c));
+
                           if (coords[dimIndex] !== undefined && coords[dimIndex] !== -1) {
                             dimensionValues.add(coords[dimIndex]);
                           }
@@ -1065,8 +1030,10 @@ export default function TaskDetailPage() {
                             }
                             onSelectionChange={(keys) => {
                               const keysArray = Array.from(keys);
+
                               if (keysArray.length > 0) {
                                 const valueIndex = parseInt(keysArray[0] as string);
+
                                 handleDimensionFilterChange(dimension, valueIndex);
                               }
                             }}
@@ -1101,21 +1068,21 @@ export default function TaskDetailPage() {
                   }}
                 >
                   <SimpleTableView
-                    tableData={tableData}
                     columnValues={(() => {
                       if (!tableData || tableData.length === 0) return [];
-                      const cols = Object.keys(tableData[0]).filter(
+
+                      return Object.keys(tableData[0]).filter(
                         (key) => key !== "key" && key !== "rowTitle"
                       );
-                      return cols;
                     })()}
+                    hasBatchTag={hasBatchTag}
+                    tableData={tableData}
+                    tableScale={tableScale}
                     xAxis={xAxis}
                     yAxis={yAxis}
-                    tableScale={tableScale}
-                    hasBatchTag={hasBatchTag}
+                    onScaleChange={handleScaleChange}
                     onViewImage={viewImageInModal}
                     onViewMultipleImages={viewMultipleImagesInModal}
-                    onScaleChange={handleScaleChange}
                   />
                 </div>
               </CardBody>
@@ -1129,8 +1096,8 @@ export default function TaskDetailPage() {
             <CardBody>
               <div className="text-center p-8">
                 <Icon
-                  icon="solar:table-linear"
                   className="w-16 h-16 mx-auto mb-4 text-default-300"
+                  icon="solar:table-linear"
                 />
                 <h4 className="text-lg font-medium mb-2">无法构建空间坐标系统表格</h4>
                 <p className="text-default-500 mb-4">
@@ -1165,8 +1132,8 @@ export default function TaskDetailPage() {
             <CardBody>
               <div className="text-center p-8">
                 <Icon
-                  icon="solar:chart-2-linear"
                   className="w-16 h-16 mx-auto mb-4 text-default-300"
+                  icon="solar:chart-2-linear"
                 />
                 <h4 className="text-lg font-medium mb-2">无法构建空间坐标系统</h4>
                 <p className="text-default-500">此任务没有足够的维度变量来创建空间坐标表格</p>
@@ -1248,10 +1215,19 @@ export default function TaskDetailPage() {
                           <div
                             key={index}
                             className="relative overflow-hidden border border-default-200 cursor-pointer flex items-center justify-center bg-default-50 rounded-lg"
+                            role="button"
                             style={{ minHeight: "300px" }}
+                            tabIndex={0}
                             onClick={() => {
                               setCurrentImageUrl(url);
                               setIsGridView(false);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setCurrentImageUrl(url);
+                                setIsGridView(false);
+                              }
                             }}
                           >
                             <Image
@@ -1350,8 +1326,8 @@ export default function TaskDetailPage() {
                           评价
                         </h4>
                         <Button
-                          size="sm"
                           color="primary"
+                          size="sm"
                           variant="flat"
                           onPress={() => setIsEvaluationModalOpen(true)}
                         >
@@ -1369,7 +1345,7 @@ export default function TaskDetailPage() {
                               </Chip>
                             ))}
                             {currentEvaluations.length > 3 && (
-                              <Chip size="sm" variant="flat" className="text-default-500">
+                              <Chip className="text-default-500" size="sm" variant="flat">
                                 +{currentEvaluations.length - 3} 更多
                               </Chip>
                             )}
@@ -1415,14 +1391,17 @@ export default function TaskDetailPage() {
               <ModalBody className="space-y-4">
                 {/* 添加新评价 */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">添加新评价</label>
+                  <label className="text-sm font-medium" htmlFor="new-evaluation-input">
+                    添加新评价
+                  </label>
                   <div className="flex gap-2">
                     <input
+                      className="flex-1 px-3 py-2 border border-default-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      id="new-evaluation-input"
+                      placeholder="输入评价内容..."
                       type="text"
                       value={newEvaluation}
                       onChange={(e) => setNewEvaluation(e.target.value)}
-                      placeholder="输入评价内容..."
-                      className="flex-1 px-3 py-2 border border-default-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                       onKeyPress={(e) => {
                         if (e.key === "Enter") {
                           addEvaluation();
@@ -1431,8 +1410,8 @@ export default function TaskDetailPage() {
                     />
                     <Button
                       color="primary"
-                      onPress={addEvaluation}
                       isDisabled={!newEvaluation.trim()}
+                      onPress={addEvaluation}
                     >
                       添加
                     </Button>
@@ -1441,7 +1420,7 @@ export default function TaskDetailPage() {
 
                 {/* 现有评价列表 */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">现有评价</label>
+                  <div className="text-sm font-medium">现有评价</div>
                   {currentEvaluations.length > 0 ? (
                     <div className="space-y-2 max-h-60 overflow-y-auto">
                       {currentEvaluations.map((evaluation, index) => (
@@ -1452,8 +1431,8 @@ export default function TaskDetailPage() {
                           <span className="flex-1 text-sm">{evaluation}</span>
                           <Button
                             isIconOnly
-                            size="sm"
                             color="danger"
+                            size="sm"
                             variant="light"
                             onPress={() => removeEvaluation(index)}
                           >

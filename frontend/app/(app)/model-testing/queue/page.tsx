@@ -4,13 +4,8 @@ import React, { useState, useEffect } from "react";
 import {
   Card,
   CardBody,
-  CardHeader,
-  Chip,
-  Progress,
   Spinner,
   Button,
-  Divider,
-  Badge,
   ScrollShadow,
   Modal,
   ModalContent,
@@ -20,16 +15,17 @@ import {
   useDisclosure,
 } from "@heroui/react";
 import { Icon } from "@iconify/react";
-import { getTasks, forceCompleteTask, forceCancelTask } from "@/utils/apiClient";
-import { TaskListItem, APIResponse } from "@/types/task";
-import { CustomProgress } from "@/components/ui/custom-progress";
 import { toast } from "sonner";
+
+import { getTasks, forceCompleteTask, forceCancelTask } from "@/utils/apiClient";
+import { TaskListItem } from "@/types/task";
+import { CustomProgress } from "@/components/ui/custom-progress";
 
 export default function QueuePage() {
   const [queueTasks, setQueueTasks] = useState<TaskListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [total, setTotal] = useState(0);
+
   const [operatingTaskId, setOperatingTaskId] = useState<string | null>(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [confirmAction, setConfirmAction] = useState<{
@@ -91,7 +87,6 @@ export default function QueuePage() {
       // 刷新任务列表
       await loadQueueTasks(true);
     } catch (error: any) {
-      console.error("强制操作失败:", error);
       toast.error(`强制操作失败: ${error.message || "未知错误"}`);
     } finally {
       setOperatingTaskId(null);
@@ -121,9 +116,8 @@ export default function QueuePage() {
       allTasks.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       setQueueTasks(allTasks);
-      setTotal(allTasks.length);
-    } catch (error) {
-      console.error("加载队列任务失败:", error);
+    } catch {
+      // 忽略加载错误
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -139,6 +133,7 @@ export default function QueuePage() {
   useEffect(() => {
     loadQueueTasks();
     const interval = setInterval(() => loadQueueTasks(true), 15000); // 改为15秒
+
     return () => clearInterval(interval);
   }, []);
 
@@ -179,11 +174,11 @@ export default function QueuePage() {
           <div className="flex items-center gap-3 ml-6">
             <Button
               color="primary"
-              variant="flat"
-              size="sm"
-              onPress={handleRefresh}
               isLoading={refreshing}
+              size="sm"
               startContent={!refreshing ? <Icon icon="solar:refresh-linear" /> : undefined}
+              variant="flat"
+              onPress={handleRefresh}
             >
               {refreshing ? "刷新中..." : "刷新"}
             </Button>
@@ -199,7 +194,7 @@ export default function QueuePage() {
               </div>
             ) : queueTasks.length === 0 ? (
               <div className="text-center py-12 text-default-400">
-                <Icon icon="solar:sleep-linear" className="w-16 h-16 mx-auto mb-4" />
+                <Icon className="w-16 h-16 mx-auto mb-4" icon="solar:sleep-linear" />
                 <p className="text-lg">当前没有排队或执行中的任务</p>
                 <p className="text-sm">所有任务都已完成</p>
               </div>
@@ -221,8 +216,8 @@ export default function QueuePage() {
                               className={`flex-shrink-0 w-10 h-10 rounded-full bg-default-100 flex items-center justify-center ${getStatusColor(task.status)}`}
                             >
                               <Icon
-                                icon={getStatusIcon(task.status)}
                                 className={`w-5 h-5 ${task.status === "processing" ? "animate-pulse" : ""}`}
+                                icon={getStatusIcon(task.status)}
                               />
                             </div>
 
@@ -236,22 +231,22 @@ export default function QueuePage() {
                                   <div className="flex items-center gap-3 text-xs text-default-500">
                                     <span>
                                       <Icon
-                                        icon="solar:user-linear"
                                         className="w-3 h-3 inline mr-1"
+                                        icon="solar:user-linear"
                                       />
                                       {task.username}
                                     </span>
                                     <span>
                                       <Icon
-                                        icon="solar:calendar-linear"
                                         className="w-3 h-3 inline mr-1"
+                                        icon="solar:calendar-linear"
                                       />
                                       {formatTime(task.created_at)}
                                     </span>
                                     <span>
                                       <Icon
-                                        icon="solar:clock-linear"
                                         className="w-3 h-3 inline mr-1"
+                                        icon="solar:clock-linear"
                                       />
                                       {getExecutionTime(task.created_at, task.completed_at)}
                                     </span>
@@ -261,28 +256,28 @@ export default function QueuePage() {
                                 {/* 强制操作按钮 */}
                                 <div className="flex gap-2">
                                   <Button
-                                    size="sm"
-                                    variant="flat"
                                     color="success"
                                     isLoading={operatingTaskId === task.id}
+                                    size="sm"
+                                    startContent={
+                                      <Icon className="w-4 h-4" icon="solar:check-circle-linear" />
+                                    }
+                                    variant="flat"
                                     onPress={() =>
                                       handleForceAction("complete", task.id, task.name)
-                                    }
-                                    startContent={
-                                      <Icon icon="solar:check-circle-linear" className="w-4 h-4" />
                                     }
                                   >
                                     强制完成
                                   </Button>
                                   <Button
-                                    size="sm"
-                                    variant="flat"
                                     color="danger"
                                     isLoading={operatingTaskId === task.id}
-                                    onPress={() => handleForceAction("cancel", task.id, task.name)}
+                                    size="sm"
                                     startContent={
-                                      <Icon icon="solar:close-circle-linear" className="w-4 h-4" />
+                                      <Icon className="w-4 h-4" icon="solar:close-circle-linear" />
                                     }
+                                    variant="flat"
+                                    onPress={() => handleForceAction("cancel", task.id, task.name)}
                                   >
                                     强制取消
                                   </Button>
@@ -314,11 +309,11 @@ export default function QueuePage() {
                                   <span className="font-medium text-sm">{task.progress}%</span>
                                 </div>
                                 <CustomProgress
-                                  total={task.total_images}
+                                  className="w-full"
                                   completed={task.completed_images}
                                   failed={task.failed_images}
                                   size="sm"
-                                  className="w-full"
+                                  total={task.total_images}
                                 />
                               </div>
 
@@ -328,17 +323,17 @@ export default function QueuePage() {
                                   ID: {task.id}
                                 </span>
                                 <Button
-                                  size="sm"
-                                  variant="light"
                                   isIconOnly
                                   className="h-5 w-5 min-w-5 ml-2"
+                                  size="sm"
+                                  title="复制任务ID"
+                                  variant="light"
                                   onPress={() => {
                                     navigator.clipboard.writeText(task.id);
                                     toast.success("任务ID已复制到剪贴板");
                                   }}
-                                  title="复制任务ID"
                                 >
-                                  <Icon icon="solar:copy-linear" className="w-3 h-3" />
+                                  <Icon className="w-3 h-3" icon="solar:copy-linear" />
                                 </Button>
                               </div>
                             </div>
@@ -355,17 +350,17 @@ export default function QueuePage() {
       </div>
 
       {/* 强制操作确认弹窗 */}
-      <Modal isOpen={isOpen} onClose={onClose} size="md">
+      <Modal isOpen={isOpen} size="md" onClose={onClose}>
         <ModalContent>
           <ModalHeader>
             <div className="flex items-center gap-2">
               <Icon
+                className={`w-5 h-5 ${confirmAction?.type === "complete" ? "text-success" : "text-danger"}`}
                 icon={
                   confirmAction?.type === "complete"
                     ? "solar:check-circle-linear"
                     : "solar:close-circle-linear"
                 }
-                className={`w-5 h-5 ${confirmAction?.type === "complete" ? "text-success" : "text-danger"}`}
               />
               {confirmAction?.type === "complete" ? "强制完成任务" : "强制取消任务"}
             </div>
@@ -398,8 +393,8 @@ export default function QueuePage() {
             </Button>
             <Button
               color={confirmAction?.type === "complete" ? "warning" : "danger"}
-              onPress={executeForceAction}
               isLoading={operatingTaskId === confirmAction?.taskId}
+              onPress={executeForceAction}
             >
               确认{confirmAction?.type === "complete" ? "强制完成" : "强制取消"}
             </Button>

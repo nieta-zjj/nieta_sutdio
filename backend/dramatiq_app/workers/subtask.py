@@ -8,7 +8,7 @@ import logging
 
 # 配置日志
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.WARNING)
 
 # 导入broker和actor
 # 注意：broker_setup会在导入时初始化数据库连接

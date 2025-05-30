@@ -121,7 +121,10 @@ const notifications: Record<NotificationTabs, Notification[]> = {
 export default function NotificationsCard(props: CardProps) {
   const [activeTab, setActiveTab] = React.useState<NotificationTabs>(NotificationTabs.All);
 
-  const activeNotifications = notifications[activeTab];
+  const activeNotifications =
+    activeTab in notifications
+      ? notifications[activeTab as keyof typeof notifications]
+      : notifications[NotificationTabs.All];
 
   return (
     <Card className="w-full max-w-[420px]" {...props}>

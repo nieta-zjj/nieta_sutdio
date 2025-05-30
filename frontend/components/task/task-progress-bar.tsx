@@ -21,18 +21,19 @@ export const TaskProgressBar: React.FC<TaskProgressBarProps> = ({
     if (progress === 100) return "success";
     if (progress >= 75) return "primary";
     if (progress >= 50) return "warning";
+
     return "default";
   };
 
   return (
     <div className="w-full">
       <Progress
+        className="w-full"
+        color={getProgressColor(progress)}
+        label={showLabel ? `${processedImages}/${totalImages} 张图片` : undefined}
+        showValueLabel={showLabel}
         size={size}
         value={progress}
-        color={getProgressColor(progress)}
-        showValueLabel={showLabel}
-        label={showLabel ? `${processedImages}/${totalImages} 张图片` : undefined}
-        className="w-full"
       />
     </div>
   );

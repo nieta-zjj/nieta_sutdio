@@ -2,19 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Card,
-  CardBody,
-  CardHeader,
   Input,
-  Select,
-  SelectItem,
   Divider,
   Switch,
   Checkbox,
   Button,
-  Textarea,
-  Slider,
-  Tooltip,
   Tabs,
   Tab,
   useDisclosure,
@@ -26,6 +18,8 @@ import {
   ModalFooter,
 } from "@heroui/react";
 import { Icon } from "@iconify/react";
+import { toast } from "sonner";
+
 import { VTokenSelector } from "@/components/vtoken";
 import { PROMPT_TYPE_TO_VTOKEN_TYPE } from "@/types/vtoken";
 import { SearchSelectItem } from "@/types/search";
@@ -34,16 +28,12 @@ import {
   RatioParam,
   SeedParam,
   UsePolishParam,
-  FreetextParam,
-  OCVTokenParam,
-  ElementumParam,
   IsLuminaParam,
   LuminaModelNameParam,
   LuminaCfgParam,
   LuminaStepParam,
 } from "@/components/test_params";
 import { apiRequest } from "@/utils/apiClient";
-import { toast } from "sonner";
 import { calculateTaskCount, formatTaskCount, isTaskCountExceeded } from "@/utils/taskCalculator";
 import { useAuth } from "@/lib/auth/client";
 import { LoginModal } from "@/components/login/login-modal";
@@ -167,7 +157,9 @@ export default function TestPage() {
   // 获取下一个变量ID
   const getNextVariableId = () => {
     const nextId = variableIdCounter;
+
     setVariableIdCounter((prevId) => prevId + 1);
+
     return `${nextId}`;
   };
 
@@ -278,6 +270,7 @@ export default function TestPage() {
         if (typeof value === "function") {
           return undefined;
         }
+
         return value;
       });
 
@@ -295,8 +288,10 @@ export default function TestPage() {
 
     try {
       const storedConfig = localStorage.getItem(STORAGE_KEY);
+
       if (!storedConfig) {
         console.log("没有找到保存的配置");
+
         return;
       }
 
@@ -331,6 +326,7 @@ export default function TestPage() {
               }
             : {}),
         }));
+
         setPrompts(validPrompts);
       }
 
@@ -358,9 +354,11 @@ export default function TestPage() {
     if (isClient) {
       // 先检查是否有复用的任务
       const reusedTaskStr = localStorage.getItem("reusedTask");
+
       if (reusedTaskStr) {
         try {
           const reusedTaskData = JSON.parse(reusedTaskStr);
+
           setReusedTask(reusedTaskData);
           // 不立即应用，等待用户确认
         } catch (error) {
@@ -382,6 +380,7 @@ export default function TestPage() {
       const timer = setTimeout(() => {
         saveConfigToLocalStorage();
       }, 500);
+
       return () => clearTimeout(timer);
     }
   }, [
@@ -402,6 +401,7 @@ export default function TestPage() {
   // 清理任务参数数据 - 从useEffect中移出到组件内作为独立函数
   const cleanParameter = (param: TaskParameter) => {
     const cleanedParam = { ...param };
+
     if (param.is_variable) {
       // 变量模式保留变量相关字段和变量值列表
       delete cleanedParam.value;
@@ -414,6 +414,7 @@ export default function TestPage() {
       delete cleanedParam.variable_id;
       delete cleanedParam.variable_values;
     }
+
     return cleanedParam;
   };
 
@@ -464,6 +465,7 @@ export default function TestPage() {
     };
 
     const formattedJson = JSON.stringify(data, null, 2);
+
     setJsonData(formattedJson);
     setEditingJson(formattedJson);
   }, [
@@ -611,6 +613,7 @@ export default function TestPage() {
 
             return newVal;
           });
+
           updatedPrompt.variable_values = updatedValues;
         } else {
           // 如果没有变量值列表，创建一个空的带默认值
@@ -685,6 +688,7 @@ export default function TestPage() {
   // 切换提示词选中状态（用于批量编辑）
   const togglePromptSelection = (index: number) => {
     const newPrompts = [...prompts];
+
     newPrompts[index].selected = !newPrompts[index].selected;
     setPrompts(newPrompts);
     setSelectedCount(newPrompts.filter((p) => p.selected).length);
@@ -702,6 +706,7 @@ export default function TestPage() {
     const newPrompts = [...prompts];
     const targetIndex = direction === "up" ? index - 1 : index + 1;
     const temp = newPrompts[index];
+
     newPrompts[index] = newPrompts[targetIndex];
     newPrompts[targetIndex] = temp;
     setPrompts(newPrompts);
@@ -712,6 +717,7 @@ export default function TestPage() {
     const promptToDuplicate = prompts[index];
     const newPrompt = { ...promptToDuplicate, selected: false };
     const newPrompts = [...prompts];
+
     newPrompts.splice(index + 1, 0, newPrompt);
     setPrompts(newPrompts);
   };
@@ -754,6 +760,7 @@ export default function TestPage() {
       toast.success("JSON配置应用成功");
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "JSON格式错误，请检查语法";
+
       setJsonErrorMessage(
         `JSON解析失败：\n\n${errorMessage}\n\n请检查JSON格式是否正确，注意：\n• 字符串需要用双引号包围\n• 对象和数组的语法要正确\n• 不能有多余的逗号\n• 括号要匹配`
       );
@@ -850,6 +857,7 @@ export default function TestPage() {
     if (!user) {
       // 未登录，显示登录Modal
       onLoginModalOpen();
+
       return;
     }
 
@@ -859,8 +867,10 @@ export default function TestPage() {
     // 如果有缺失的变量名，显示警告
     if (missingVariableNames.length > 0) {
       const missingNamesStr = missingVariableNames.join("、");
+
       setValidationMessage(`以下变量缺少变量名，请补充后再提交：\n${missingNamesStr}`);
       onValidationModalOpen();
+
       return;
     }
 
@@ -926,6 +936,7 @@ export default function TestPage() {
           `任务数量超过限制！\n\n即将生成 ${formatTaskCount(taskCount)} 个任务，但系统限制最多生成 50,000 个任务。\n\n请减少变量值的数量或调整任务参数。`
         );
         onValidationModalOpen();
+
         return;
       }
 
@@ -1037,6 +1048,7 @@ export default function TestPage() {
               : "";
 
     const newValues = parameter.variable_values ? [...parameter.variable_values] : [];
+
     newValues.push(defaultValue);
 
     return { ...parameter, variable_values: newValues };
@@ -1049,6 +1061,7 @@ export default function TestPage() {
     }
 
     const newValues = [...parameter.variable_values];
+
     newValues.splice(index, 1);
 
     return { ...parameter, variable_values: newValues };
@@ -1071,6 +1084,7 @@ export default function TestPage() {
     const newValues = [...parameter.variable_values];
     const targetIndex = direction === "up" ? index - 1 : index + 1;
     const temp = newValues[index];
+
     newValues[index] = newValues[targetIndex];
     newValues[targetIndex] = temp;
 
@@ -1085,6 +1099,7 @@ export default function TestPage() {
 
     const newValues = [...parameter.variable_values];
     const valueToDuplicate = newValues[index];
+
     newValues.splice(index + 1, 0, valueToDuplicate);
 
     return { ...parameter, variable_values: newValues };
@@ -1201,6 +1216,7 @@ export default function TestPage() {
 
       // 创建下载链接
       const a = document.createElement("a");
+
       a.href = url;
       a.download = `${name || "model_test_config"}.json`;
       document.body.appendChild(a);
@@ -1225,17 +1241,21 @@ export default function TestPage() {
     try {
       // 创建文件输入元素
       const input = document.createElement("input");
+
       input.type = "file";
       input.accept = ".json";
 
       input.onchange = (e) => {
         const file = (e.target as HTMLInputElement).files?.[0];
+
         if (!file) return;
 
         const reader = new FileReader();
+
         reader.onload = (event) => {
           try {
             const config = JSON.parse(event.target?.result as string);
+
             // 更新所有状态
             if (config.name !== undefined) setName(config.name);
             if (config.prompts !== undefined) setPrompts(config.prompts);
@@ -1316,7 +1336,7 @@ export default function TestPage() {
 
   return (
     <>
-      <style jsx global>
+      <style global jsx>
         {hideScrollbarStyle}
       </style>
       {/* 左侧参数设置区域 - 增大与分割线的安全距离 */}
@@ -1335,10 +1355,10 @@ export default function TestPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">任务名称</label>
                 <Input
+                  className="w-full"
                   placeholder="输入任务名称"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full"
                 />
                 <p className="text-xs text-default-400">为您的任务指定一个名称</p>
               </div>
@@ -1350,10 +1370,10 @@ export default function TestPage() {
                   <h3 className="text-lg font-medium">提示词设置</h3>
                   <div className="flex items-center gap-2">
                     <Switch
-                      isSelected={batchEditMode}
-                      onValueChange={setBatchEditMode}
-                      size="sm"
                       aria-label="启用批量编辑模式"
+                      isSelected={batchEditMode}
+                      size="sm"
+                      onValueChange={setBatchEditMode}
                     />
                     <span className="text-sm">批量编辑</span>
                   </div>
@@ -1361,22 +1381,22 @@ export default function TestPage() {
                 <div className="flex items-center gap-2">
                   {batchEditMode && selectedCount > 0 && (
                     <Button
+                      aria-label="批量删除选中的提示词"
                       color="danger"
                       size="sm"
-                      variant="flat"
                       startContent={<Icon icon="solar:trash-bin-trash-linear" />}
+                      variant="flat"
                       onPress={batchDeletePrompts}
-                      aria-label="批量删除选中的提示词"
                     >
                       批量删除 ({selectedCount})
                     </Button>
                   )}
                   <Button
+                    aria-label="添加新提示词"
                     color="primary"
                     size="sm"
                     startContent={<Icon icon="solar:add-circle-linear" />}
                     onPress={addPrompt}
-                    aria-label="添加新提示词"
                   >
                     添加提示词
                   </Button>
@@ -1402,27 +1422,27 @@ export default function TestPage() {
                       {/* 批量编辑时的选择框 */}
                       {batchEditMode && (
                         <Checkbox
+                          aria-label={`选择提示词 ${index + 1}`}
+                          className="mr-1"
                           isSelected={prompt.selected}
                           onValueChange={() => togglePromptSelection(index)}
-                          className="mr-1"
-                          aria-label={`选择提示词 ${index + 1}`}
                         />
                       )}
 
                       {/* 1. 类型选择区 */}
                       <div className="w-[180px] flex-shrink-0">
                         <Tabs
-                          size="sm"
                           aria-label="提示词类型"
-                          selectedKey={prompt.type}
-                          onSelectionChange={(key) => {
-                            updatePrompt(index, "type", key.toString());
-                          }}
                           classNames={{
                             base: "w-full",
                             tabList: "gap-1 w-full",
                             tab: "h-7 px-2 py-0",
                             cursor: "h-7",
+                          }}
+                          selectedKey={prompt.type}
+                          size="sm"
+                          onSelectionChange={(key) => {
+                            updatePrompt(index, "type", key.toString());
                           }}
                         >
                           <Tab key="freetext" title="文本" />
@@ -1434,10 +1454,10 @@ export default function TestPage() {
                       {/* 2. 是否变量 */}
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <Switch
-                          size="sm"
-                          isSelected={prompt.is_variable}
-                          onValueChange={(checked) => updatePrompt(index, "is_variable", checked)}
                           aria-label={`将提示词 ${index + 1} 设为变量`}
+                          isSelected={prompt.is_variable}
+                          size="sm"
+                          onValueChange={(checked) => updatePrompt(index, "is_variable", checked)}
                         />
                         <span className="text-xs text-default-500">变量</span>
                       </div>
@@ -1449,17 +1469,17 @@ export default function TestPage() {
                           <div className="flex-grow">
                             {prompt.type === "freetext" ? (
                               <Input
-                                size="sm"
+                                className="w-full"
                                 placeholder="输入提示词内容"
+                                size="sm"
                                 value={prompt.value}
                                 onChange={(e) => updatePrompt(index, "value", e.target.value)}
-                                className="w-full"
                               />
                             ) : (
                               <VTokenSelector
+                                header_img={prompt.img_url}
                                 name={prompt.name}
                                 type={PROMPT_TYPE_TO_VTOKEN_TYPE[prompt.type]}
-                                header_img={prompt.img_url}
                                 onChange={(value) => {
                                   // 如果用户清除了选择（value为空），则清除所有相关字段
                                   if (!value) {
@@ -1483,6 +1503,7 @@ export default function TestPage() {
                                   };
 
                                   const newPrompts = [...prompts];
+
                                   newPrompts[index] = updatedPrompt;
                                   setPrompts(newPrompts);
                                 }}
@@ -1492,20 +1513,21 @@ export default function TestPage() {
 
                           <div className="w-20 flex-shrink-0">
                             <Input
-                              size="sm"
-                              type="number"
+                              className="w-full"
+                              max={2}
+                              min={0.5}
                               placeholder="权重"
+                              size="sm"
+                              step={0.05}
+                              type="number"
                               value={prompt.weight.toString()}
                               onChange={(e) => {
                                 const value = parseFloat(e.target.value);
+
                                 if (!isNaN(value) && value >= 0.5 && value <= 2) {
                                   updatePrompt(index, "weight", value);
                                 }
                               }}
-                              className="w-full"
-                              min={0.5}
-                              max={2}
-                              step={0.05}
                             />
                           </div>
                         </>
@@ -1514,11 +1536,11 @@ export default function TestPage() {
                           {/* 变量模式下的变量名输入框 */}
                           <div className="flex-grow">
                             <Input
-                              size="sm"
+                              className="w-full"
                               placeholder="输入变量名称"
+                              size="sm"
                               value={prompt.variable_name || ""}
                               onChange={(e) => updatePrompt(index, "variable_name", e.target.value)}
-                              className="w-full"
                             />
                           </div>
                         </>
@@ -1527,41 +1549,41 @@ export default function TestPage() {
                       {/* 5. 操作按钮组 */}
                       <div className="flex gap-1 flex-shrink-0">
                         <Button
+                          isIconOnly
+                          aria-label={`上移提示词 ${index + 1}`}
+                          isDisabled={index === 0}
                           size="sm"
                           variant="light"
-                          isIconOnly
-                          isDisabled={index === 0}
                           onPress={() => movePrompt(index, "up")}
-                          aria-label={`上移提示词 ${index + 1}`}
                         >
                           <Icon icon="solar:alt-arrow-up-linear" />
                         </Button>
                         <Button
+                          isIconOnly
+                          aria-label={`下移提示词 ${index + 1}`}
+                          isDisabled={index === prompts.length - 1}
                           size="sm"
                           variant="light"
-                          isIconOnly
-                          isDisabled={index === prompts.length - 1}
                           onPress={() => movePrompt(index, "down")}
-                          aria-label={`下移提示词 ${index + 1}`}
                         >
                           <Icon icon="solar:alt-arrow-down-linear" />
                         </Button>
                         <Button
+                          isIconOnly
+                          aria-label={`复制提示词 ${index + 1}`}
                           size="sm"
                           variant="light"
-                          isIconOnly
                           onPress={() => duplicatePrompt(index)}
-                          aria-label={`复制提示词 ${index + 1}`}
                         >
                           <Icon icon="solar:copy-linear" />
                         </Button>
                         <Button
+                          isIconOnly
+                          aria-label={`删除提示词 ${index + 1}`}
+                          color="danger"
                           size="sm"
                           variant="light"
-                          color="danger"
-                          isIconOnly
                           onPress={() => removePrompt(index)}
-                          aria-label={`删除提示词 ${index + 1}`}
                         >
                           <Icon icon="solar:trash-bin-trash-linear" />
                         </Button>
@@ -1574,10 +1596,11 @@ export default function TestPage() {
                         <div className="flex justify-between items-center mb-2">
                           <span className="text-sm font-medium">变量值列表</span>
                           <Button
-                            size="sm"
-                            variant="flat"
+                            aria-label={`为变量 ${prompt.variable_name || "未命名变量"} 添加值`}
                             color="primary"
+                            size="sm"
                             startContent={<Icon icon="solar:add-circle-linear" width={14} />}
+                            variant="flat"
                             onPress={() => {
                               // 创建新的变量值对象
                               const promptType = prompt.type;
@@ -1601,9 +1624,9 @@ export default function TestPage() {
                                 ...(prompt.variable_values || []),
                                 newVariableValue,
                               ];
+
                               updatePrompt(index, "variable_values", newVariableValues);
                             }}
-                            aria-label={`为变量 ${prompt.variable_name || "未命名变量"} 添加值`}
                           >
                             添加值
                           </Button>
@@ -1618,26 +1641,28 @@ export default function TestPage() {
                               <div className="flex-grow">
                                 {prompt.type === "freetext" ? (
                                   <Input
-                                    size="sm"
+                                    className="w-full"
                                     placeholder="输入提示词内容"
+                                    size="sm"
                                     value={varValue.value || ""}
                                     onChange={(e) => {
                                       const newVariableValues = [...(prompt.variable_values || [])];
+
                                       newVariableValues[varIndex] = {
                                         ...newVariableValues[varIndex],
                                         value: e.target.value,
                                       };
                                       updatePrompt(index, "variable_values", newVariableValues);
                                     }}
-                                    className="w-full"
                                   />
                                 ) : (
                                   <VTokenSelector
+                                    header_img={varValue.img_url || ""}
                                     name={varValue.name || ""}
                                     type={PROMPT_TYPE_TO_VTOKEN_TYPE[prompt.type]}
-                                    header_img={varValue.img_url || ""}
                                     onChange={(value) => {
                                       const newVariableValues = [...(prompt.variable_values || [])];
+
                                       if (!value) {
                                         // 清除
                                         newVariableValues[varIndex] = {
@@ -1658,6 +1683,7 @@ export default function TestPage() {
                                     }}
                                     onSelectItem={(item: SearchSelectItem) => {
                                       const newVariableValues = [...(prompt.variable_values || [])];
+
                                       newVariableValues[varIndex] = {
                                         ...newVariableValues[varIndex],
                                         name: item.name,
@@ -1673,14 +1699,20 @@ export default function TestPage() {
 
                               <div className="w-20 flex-shrink-0">
                                 <Input
-                                  size="sm"
-                                  type="number"
+                                  className="w-full"
+                                  max={2}
+                                  min={0.5}
                                   placeholder="权重"
+                                  size="sm"
+                                  step={0.05}
+                                  type="number"
                                   value={(varValue.weight || 1.0).toString()}
                                   onChange={(e) => {
                                     const value = parseFloat(e.target.value);
+
                                     if (!isNaN(value) && value >= 0.5 && value <= 2) {
                                       const newVariableValues = [...(prompt.variable_values || [])];
+
                                       newVariableValues[varIndex] = {
                                         ...newVariableValues[varIndex],
                                         weight: value,
@@ -1688,76 +1720,76 @@ export default function TestPage() {
                                       updatePrompt(index, "variable_values", newVariableValues);
                                     }
                                   }}
-                                  className="w-full"
-                                  min={0.5}
-                                  max={2}
-                                  step={0.05}
                                 />
                               </div>
 
                               <div className="flex gap-1">
                                 <Button
+                                  isIconOnly
+                                  aria-label={`上移变量值 ${varIndex + 1}`}
+                                  isDisabled={varIndex === 0}
                                   size="sm"
                                   variant="light"
-                                  isIconOnly
-                                  isDisabled={varIndex === 0}
                                   onPress={() => {
                                     const newVariableValues = [...(prompt.variable_values || [])];
                                     const temp = newVariableValues[varIndex];
+
                                     newVariableValues[varIndex] = newVariableValues[varIndex - 1];
                                     newVariableValues[varIndex - 1] = temp;
                                     updatePrompt(index, "variable_values", newVariableValues);
                                   }}
-                                  aria-label={`上移变量值 ${varIndex + 1}`}
                                 >
                                   <Icon icon="solar:alt-arrow-up-linear" width={16} />
                                 </Button>
                                 <Button
-                                  size="sm"
-                                  variant="light"
                                   isIconOnly
+                                  aria-label={`下移变量值 ${varIndex + 1}`}
                                   isDisabled={
                                     varIndex === (prompt.variable_values?.length || 0) - 1
                                   }
+                                  size="sm"
+                                  variant="light"
                                   onPress={() => {
                                     const newVariableValues = [...(prompt.variable_values || [])];
                                     const temp = newVariableValues[varIndex];
+
                                     newVariableValues[varIndex] = newVariableValues[varIndex + 1];
                                     newVariableValues[varIndex + 1] = temp;
                                     updatePrompt(index, "variable_values", newVariableValues);
                                   }}
-                                  aria-label={`下移变量值 ${varIndex + 1}`}
                                 >
                                   <Icon icon="solar:alt-arrow-down-linear" width={16} />
                                 </Button>
                                 <Button
+                                  isIconOnly
+                                  aria-label={`复制变量值 ${varIndex + 1}`}
                                   size="sm"
                                   variant="light"
-                                  isIconOnly
                                   onPress={() => {
                                     const newVariableValues = [...(prompt.variable_values || [])];
                                     const valueToDuplicate = newVariableValues[varIndex];
+
                                     newVariableValues.splice(varIndex + 1, 0, {
                                       ...valueToDuplicate,
                                     });
                                     updatePrompt(index, "variable_values", newVariableValues);
                                   }}
-                                  aria-label={`复制变量值 ${varIndex + 1}`}
                                 >
                                   <Icon icon="solar:copy-linear" width={16} />
                                 </Button>
                                 <Button
+                                  isIconOnly
+                                  aria-label={`删除变量值 ${varIndex + 1}`}
+                                  color="danger"
+                                  isDisabled={(prompt.variable_values?.length || 0) <= 1}
                                   size="sm"
                                   variant="light"
-                                  color="danger"
-                                  isIconOnly
-                                  isDisabled={(prompt.variable_values?.length || 0) <= 1}
                                   onPress={() => {
                                     const newVariableValues = [...(prompt.variable_values || [])];
+
                                     newVariableValues.splice(varIndex, 1);
                                     updatePrompt(index, "variable_values", newVariableValues);
                                   }}
-                                  aria-label={`删除变量值 ${varIndex + 1}`}
                                 >
                                   <Icon icon="solar:trash-bin-trash-linear" width={16} />
                                 </Button>
@@ -1779,26 +1811,26 @@ export default function TestPage() {
                 {/* 比例 */}
                 <div className="py-2 border-b border-default-100 dark:border-default-100/70">
                   <RatioParam
-                    value={ratio.value}
                     isVariable={ratio.is_variable}
-                    variableValues={ratio.variable_values}
+                    value={ratio.value}
                     variableName={ratio.variable_name}
+                    variableValues={ratio.variable_values}
                     onChange={(newValue) =>
                       setRatio(updateParameterVariableValue(ratio, 0, newValue))
                     }
                     onVariableChange={(isVariable) =>
                       setRatio(updateParameterVariableStatus(ratio, isVariable, "比例"))
                     }
-                    onVariableValuesChange={(values) => {
-                      setRatio({
-                        ...ratio,
-                        variable_values: values,
-                      });
-                    }}
                     onVariableNameChange={(name) => {
                       setRatio({
                         ...ratio,
                         variable_name: name,
+                      });
+                    }}
+                    onVariableValuesChange={(values) => {
+                      setRatio({
+                        ...ratio,
+                        variable_values: values,
                       });
                     }}
                   />
@@ -1807,26 +1839,26 @@ export default function TestPage() {
                 {/* 种子 */}
                 <div className="py-2 border-b border-default-100 dark:border-default-100/70">
                   <SeedParam
-                    value={seed.value}
                     isVariable={seed.is_variable}
-                    variableValues={seed.variable_values}
+                    value={seed.value}
                     variableName={seed.variable_name}
+                    variableValues={seed.variable_values}
                     onChange={(newValue) =>
                       setSeed(updateParameterVariableValue(seed, 0, newValue))
                     }
                     onVariableChange={(isVariable) =>
                       setSeed(updateParameterVariableStatus(seed, isVariable, "种子"))
                     }
-                    onVariableValuesChange={(values) => {
-                      setSeed({
-                        ...seed,
-                        variable_values: values,
-                      });
-                    }}
                     onVariableNameChange={(name) => {
                       setSeed({
                         ...seed,
                         variable_name: name,
+                      });
+                    }}
+                    onVariableValuesChange={(values) => {
+                      setSeed({
+                        ...seed,
+                        variable_values: values,
                       });
                     }}
                   />
@@ -1835,26 +1867,26 @@ export default function TestPage() {
                 {/* 润色 */}
                 <div className="py-2 border-b border-default-100 dark:border-default-100/70">
                   <UsePolishParam
-                    value={userPolish.value}
                     isVariable={userPolish.is_variable}
-                    variableValues={userPolish.variable_values}
+                    value={userPolish.value}
                     variableName={userPolish.variable_name}
+                    variableValues={userPolish.variable_values}
                     onChange={(newValue) =>
                       setUserPolish(updateParameterVariableValue(userPolish, 0, newValue))
                     }
                     onVariableChange={(isVariable) =>
                       setUserPolish(updateParameterVariableStatus(userPolish, isVariable, "润色"))
                     }
-                    onVariableValuesChange={(values) => {
-                      setUserPolish({
-                        ...userPolish,
-                        variable_values: values,
-                      });
-                    }}
                     onVariableNameChange={(name) => {
                       setUserPolish({
                         ...userPolish,
                         variable_name: name,
+                      });
+                    }}
+                    onVariableValuesChange={(values) => {
+                      setUserPolish({
+                        ...userPolish,
+                        variable_values: values,
                       });
                     }}
                   />
@@ -1863,26 +1895,26 @@ export default function TestPage() {
                 {/* 使用Lumina */}
                 <div className="py-2 border-b border-default-100 dark:border-default-100/70">
                   <IsLuminaParam
-                    value={isLumina.value}
                     isVariable={isLumina.is_variable}
-                    variableValues={isLumina.variable_values}
+                    value={isLumina.value}
                     variableName={isLumina.variable_name}
+                    variableValues={isLumina.variable_values}
                     onChange={(newValue) =>
                       setIsLumina(updateParameterVariableValue(isLumina, 0, newValue))
                     }
                     onVariableChange={(isVariable) =>
                       setIsLumina(updateParameterVariableStatus(isLumina, isVariable, "lumina"))
                     }
-                    onVariableValuesChange={(values) => {
-                      setIsLumina({
-                        ...isLumina,
-                        variable_values: values,
-                      });
-                    }}
                     onVariableNameChange={(name) => {
                       setIsLumina({
                         ...isLumina,
                         variable_name: name,
+                      });
+                    }}
+                    onVariableValuesChange={(values) => {
+                      setIsLumina({
+                        ...isLumina,
+                        variable_values: values,
                       });
                     }}
                   />
@@ -1894,10 +1926,11 @@ export default function TestPage() {
                     {/* Lumina模型名称 */}
                     <div className="py-2 border-b border-default-100 dark:border-default-100/70">
                       <LuminaModelNameParam
-                        value={luminaModelName.value}
                         isVariable={luminaModelName.is_variable}
-                        variableValues={luminaModelName.variable_values}
+                        placeholder="输入Lumina模型名称"
+                        value={luminaModelName.value}
                         variableName={luminaModelName.variable_name}
+                        variableValues={luminaModelName.variable_values}
                         onChange={(newValue) =>
                           setLuminaModelName(
                             updateParameterVariableValue(luminaModelName, 0, newValue)
@@ -1908,60 +1941,62 @@ export default function TestPage() {
                             updateParameterVariableStatus(luminaModelName, isVariable, "模型")
                           )
                         }
-                        onVariableValuesChange={(values) => {
-                          setLuminaModelName({
-                            ...luminaModelName,
-                            variable_values: values,
-                          });
-                        }}
                         onVariableNameChange={(name) => {
                           setLuminaModelName({
                             ...luminaModelName,
                             variable_name: name,
                           });
                         }}
-                        placeholder="输入Lumina模型名称"
+                        onVariableValuesChange={(values) => {
+                          setLuminaModelName({
+                            ...luminaModelName,
+                            variable_values: values,
+                          });
+                        }}
                       />
                     </div>
 
                     {/* Lumina配置 */}
                     <div className="py-2 border-b border-default-100 dark:border-default-100/70">
                       <LuminaCfgParam
-                        value={luminaCfg.value}
                         isVariable={luminaCfg.is_variable}
-                        variableValues={luminaCfg.variable_values}
+                        max={10}
+                        min={0}
+                        step={0.1}
+                        value={luminaCfg.value}
                         variableName={luminaCfg.variable_name}
+                        variableValues={luminaCfg.variable_values}
                         onChange={(newValue) =>
                           setLuminaCfg(updateParameterVariableValue(luminaCfg, 0, newValue))
                         }
                         onVariableChange={(isVariable) =>
                           setLuminaCfg(updateParameterVariableStatus(luminaCfg, isVariable, "cfg"))
                         }
-                        onVariableValuesChange={(values) => {
-                          setLuminaCfg({
-                            ...luminaCfg,
-                            variable_values: values,
-                          });
-                        }}
                         onVariableNameChange={(name) => {
                           setLuminaCfg({
                             ...luminaCfg,
                             variable_name: name,
                           });
                         }}
-                        min={0}
-                        max={10}
-                        step={0.1}
+                        onVariableValuesChange={(values) => {
+                          setLuminaCfg({
+                            ...luminaCfg,
+                            variable_values: values,
+                          });
+                        }}
                       />
                     </div>
 
                     {/* Lumina步数 */}
                     <div className="py-2 border-b border-default-100 dark:border-default-100/70">
                       <LuminaStepParam
-                        value={luminaStep.value}
                         isVariable={luminaStep.is_variable}
-                        variableValues={luminaStep.variable_values}
+                        max={50}
+                        min={10}
+                        step={1}
+                        value={luminaStep.value}
                         variableName={luminaStep.variable_name}
+                        variableValues={luminaStep.variable_values}
                         onChange={(newValue) =>
                           setLuminaStep(updateParameterVariableValue(luminaStep, 0, newValue))
                         }
@@ -1970,21 +2005,18 @@ export default function TestPage() {
                             updateParameterVariableStatus(luminaStep, isVariable, "步数")
                           )
                         }
-                        onVariableValuesChange={(values) => {
-                          setLuminaStep({
-                            ...luminaStep,
-                            variable_values: values,
-                          });
-                        }}
                         onVariableNameChange={(name) => {
                           setLuminaStep({
                             ...luminaStep,
                             variable_name: name,
                           });
                         }}
-                        min={10}
-                        max={50}
-                        step={1}
+                        onVariableValuesChange={(values) => {
+                          setLuminaStep({
+                            ...luminaStep,
+                            variable_values: values,
+                          });
+                        }}
                       />
                     </div>
                   </>
@@ -2018,25 +2050,25 @@ export default function TestPage() {
             <div className="mb-3 p-3 rounded-md bg-primary-50 dark:bg-primary-50/20 border border-primary-200 dark:border-primary-300/30">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Icon icon="solar:copy-linear" className="w-5 h-5 text-primary" />
+                  <Icon className="w-5 h-5 text-primary" icon="solar:copy-linear" />
                   <span className="text-sm font-medium">
                     检测到复用的任务设置: {reusedTask.name}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
-                    size="sm"
                     color="primary"
-                    variant="flat"
+                    size="sm"
                     startContent={<Icon icon="solar:check-circle-linear" />}
+                    variant="flat"
                     onPress={applyReusedTask}
                   >
                     应用
                   </Button>
                   <Button
                     size="sm"
-                    variant="flat"
                     startContent={<Icon icon="solar:close-circle-linear" />}
+                    variant="flat"
                     onPress={ignoreReusedTask}
                   >
                     忽略
@@ -2053,12 +2085,12 @@ export default function TestPage() {
             >
               {submitResult.success ? (
                 <>
-                  <Icon icon="solar:check-circle-bold" className="mr-1" />
+                  <Icon className="mr-1" icon="solar:check-circle-bold" />
                   {submitResult.message}，任务ID：{submitResult.taskId}
                 </>
               ) : (
                 <>
-                  <Icon icon="solar:close-circle-bold" className="mr-1" />
+                  <Icon className="mr-1" icon="solar:close-circle-bold" />
                   {submitResult.message}
                 </>
               )}
@@ -2067,22 +2099,22 @@ export default function TestPage() {
 
           <div className="flex justify-between">
             <Button
+              aria-label="重置所有参数"
               color="default"
+              isDisabled={isSubmitting}
               startContent={<Icon icon="solar:restart-linear" />}
               onPress={resetAllConfig}
-              aria-label="重置所有参数"
-              isDisabled={isSubmitting}
             >
               重置参数
             </Button>
             <Button
+              aria-label="开始任务"
               color="primary"
+              isDisabled={isSubmitting}
               startContent={
                 isSubmitting ? <Spinner size="sm" /> : <Icon icon="solar:play-linear" />
               }
-              aria-label="开始任务"
               onPress={submitTask}
-              isDisabled={isSubmitting}
             >
               {isSubmitting ? "提交中..." : "开始任务"}
             </Button>
@@ -2097,11 +2129,11 @@ export default function TestPage() {
 
         <div className="flex-grow h-[calc(100vh-12rem)] mb-4 relative">
           <textarea
+            aria-label="JSON配置编辑器"
+            className="w-full h-full font-mono text-xs absolute inset-0 resize-none overflow-auto p-2 border border-default-200 dark:border-default-100/80 rounded-md bg-background text-foreground"
             placeholder="编辑JSON数据"
             value={editingJson}
             onChange={(e) => handleJsonEdit(e.target.value)}
-            className="w-full h-full font-mono text-xs absolute inset-0 resize-none overflow-auto p-2 border border-default-200 dark:border-default-100/80 rounded-md bg-background text-foreground"
-            aria-label="JSON配置编辑器"
           />
         </div>
 
@@ -2109,29 +2141,29 @@ export default function TestPage() {
 
         <div className="grid grid-cols-3 gap-2">
           <Button
-            color="default"
+            aria-label="保存参数到JSON文件"
             className="w-full"
+            color="default"
             startContent={<Icon icon="solar:diskette-linear" />}
             onPress={downloadConfigAsJson}
-            aria-label="保存参数到JSON文件"
           >
             保存参数
           </Button>
           <Button
-            color="default"
+            aria-label="从JSON文件上传参数"
             className="w-full"
+            color="default"
             startContent={<Icon icon="solar:upload-linear" />}
             onPress={uploadConfigFile}
-            aria-label="从JSON文件上传参数"
           >
             上传参数
           </Button>
           <Button
-            color="primary"
-            onPress={applyJsonChanges}
-            className="w-full"
-            startContent={<Icon icon="solar:check-circle-linear" />}
             aria-label="应用JSON修改"
+            className="w-full"
+            color="primary"
+            startContent={<Icon icon="solar:check-circle-linear" />}
+            onPress={applyJsonChanges}
           >
             应用修改
           </Button>
@@ -2141,15 +2173,15 @@ export default function TestPage() {
       {/* 验证错误Modal */}
       <Modal
         isOpen={isValidationModalOpen}
-        onOpenChange={onValidationModalChange}
         placement="center"
+        onOpenChange={onValidationModalChange}
       >
         <ModalContent>
           {(onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
-                  <Icon icon="solar:danger-circle-linear" className="w-6 h-6 text-warning" />
+                  <Icon className="w-6 h-6 text-warning" icon="solar:danger-circle-linear" />
                   <span>参数验证失败</span>
                 </div>
               </ModalHeader>
@@ -2177,13 +2209,13 @@ export default function TestPage() {
       />
 
       {/* 重置确认Modal */}
-      <Modal isOpen={isResetModalOpen} onOpenChange={onResetModalChange} placement="center">
+      <Modal isOpen={isResetModalOpen} placement="center" onOpenChange={onResetModalChange}>
         <ModalContent>
           {(onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
-                  <Icon icon="solar:question-circle-linear" className="w-6 h-6 text-warning" />
+                  <Icon className="w-6 h-6 text-warning" icon="solar:question-circle-linear" />
                   <span>确认重置</span>
                 </div>
               </ModalHeader>
@@ -2206,16 +2238,16 @@ export default function TestPage() {
       {/* JSON错误Modal */}
       <Modal
         isOpen={isJsonErrorModalOpen}
-        onOpenChange={onJsonErrorModalChange}
         placement="center"
         size="lg"
+        onOpenChange={onJsonErrorModalChange}
       >
         <ModalContent>
           {(onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
-                  <Icon icon="solar:danger-circle-linear" className="w-6 h-6 text-danger" />
+                  <Icon className="w-6 h-6 text-danger" icon="solar:danger-circle-linear" />
                   <span>JSON格式错误</span>
                 </div>
               </ModalHeader>
@@ -2246,16 +2278,16 @@ export default function TestPage() {
       {/* 任务确认Modal */}
       <Modal
         isOpen={isTaskConfirmModalOpen}
-        onOpenChange={onTaskConfirmModalChange}
         placement="center"
         size="lg"
+        onOpenChange={onTaskConfirmModalChange}
       >
         <ModalContent>
           {(onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
-                  <Icon icon="solar:check-circle-linear" className="w-6 h-6 text-success" />
+                  <Icon className="w-6 h-6 text-success" icon="solar:check-circle-linear" />
                   <span>任务确认</span>
                 </div>
               </ModalHeader>

@@ -25,8 +25,11 @@ from backend.core.app import initialize_app
 
 # 禁用 httpx 的 info 级别日志
 logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("peewee").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 
 class ImageClient:

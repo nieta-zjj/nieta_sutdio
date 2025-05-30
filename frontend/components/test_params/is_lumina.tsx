@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Switch } from "@heroui/react";
+
 import { BaseParamComponent } from "./BaseParam";
 import { BooleanParamProps, ParamValueType } from "./types";
 
@@ -27,22 +28,22 @@ export const IsLuminaParam: React.FC<Partial<BooleanParamProps>> = (props) => {
 
     return (
       <Switch
+        className="min-h-[40px]"
         isSelected={boolValue}
         onValueChange={(checked) => onValueChange(checked)}
-        className="min-h-[40px]"
       />
     );
   };
 
   return (
     <BaseParamComponent
+      defaultValue={false}
+      isVariable={isVariable}
       label="lumina"
+      renderInput={renderInput}
       value={value}
       onChange={onChange}
       onVariableChange={onVariableChange}
-      isVariable={isVariable}
-      renderInput={renderInput}
-      defaultValue={false}
       {...rest}
     />
   );

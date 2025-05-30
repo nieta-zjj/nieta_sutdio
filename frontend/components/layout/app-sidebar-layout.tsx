@@ -3,14 +3,16 @@
 import React, { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Avatar, Button, ScrollShadow, Spacer, Switch } from "@heroui/react";
+import Image from "next/image";
+import { Avatar, Button, ScrollShadow, Spacer } from "@heroui/react";
 import { Icon } from "@iconify/react";
 
-import Sidebar, { SidebarItem } from "../sidebar/sidebar";
+import Sidebar from "../sidebar/sidebar";
 import { WorkspaceMode } from "../sidebar/types";
-import { workspaceModes } from "@/config/sidebar-config";
-import { useAuth } from "@/lib/auth";
 import { LoginModal } from "../login/login-modal";
+
+import { useAuth } from "@/lib/auth";
+import { workspaceModes } from "@/config/sidebar-config";
 
 interface AppSidebarLayoutProps {
   children: React.ReactNode;
@@ -39,7 +41,9 @@ export const AppSidebarLayout: React.FC<AppSidebarLayoutProps> = ({ children }) 
 
   // 用户信息状态
   const isLoggedIn = !!user;
+
   const userName = user?.username || "";
+
   const userRole = user?.roles?.[0] || "请登录系统";
 
   // 获取用户头像显示字符
@@ -59,7 +63,9 @@ export const AppSidebarLayout: React.FC<AppSidebarLayoutProps> = ({ children }) 
 
   // 获取当前模式的侧边栏配置
   const currentModeConfig = workspaceModes.find((m) => m.key === currentMode);
-  const sidebarItems = currentModeConfig?.items || [];
+  const sidebarItems = React.useMemo(() => {
+    return currentModeConfig?.items || [];
+  }, [currentModeConfig]);
 
   // 从路径中提取当前选中的菜单项
   const getCurrentSelectedKey = React.useCallback(() => {
@@ -71,28 +77,12 @@ export const AppSidebarLayout: React.FC<AppSidebarLayoutProps> = ({ children }) 
       return "test"; // 默认选中测试页面
     }
 
-    // 如果有第二段路径，使用它作为key
-    if (pathSegments.length > 1) {
-      const secondSegment = pathSegments[1];
+    // 检查是否为有效的菜单项
+    const potentialKey = pathSegments[1];
+    const validKeys = sidebarItems.map((item) => item.key);
 
-      // 直接查找匹配的菜单项key
-      const matchingItem = sidebarItems.find((item) => item.key === secondSegment);
-      if (matchingItem) {
-        return matchingItem.key;
-      }
-
-      // 如果没有直接匹配，尝试通过href匹配
-      const matchingItemByHref = sidebarItems.find(
-        (item) => item.href === `/${pathSegments[0]}/${pathSegments[1]}`
-      );
-      if (matchingItemByHref) {
-        return matchingItemByHref.key;
-      }
-    }
-
-    // 默认返回测试页面
-    return "test";
-  }, [pathname, sidebarItems]);
+    return validKeys.includes(potentialKey) ? potentialKey : "test";
+  }, [sidebarItems, pathname]);
 
   // 根据路径确定当前工作区模式和选中的菜单项
   React.useEffect(() => {
@@ -102,12 +92,14 @@ export const AppSidebarLayout: React.FC<AppSidebarLayoutProps> = ({ children }) 
     // 如果不在模型测试工作区，重定向到测试页面
     if (!pathname.startsWith("/model-testing")) {
       router.push("/model-testing/test");
+
       return;
     }
 
     // 如果访问的是 /model-testing 根路径，重定向到测试页面（主页）
     if (pathname === "/model-testing") {
       router.push("/model-testing/test");
+
       return;
     }
   }, [pathname, router]);
@@ -116,6 +108,8 @@ export const AppSidebarLayout: React.FC<AppSidebarLayoutProps> = ({ children }) 
   React.useEffect(() => {
     if (sidebarItems.length > 0) {
       const newSelectedKey = getCurrentSelectedKey();
+
+      // eslint-disable-next-line no-console
       console.log("路径变化:", pathname, "计算出的selectedKey:", newSelectedKey);
       setSelectedKey(newSelectedKey);
     }
@@ -125,8 +119,10 @@ export const AppSidebarLayout: React.FC<AppSidebarLayoutProps> = ({ children }) 
   React.useEffect(() => {
     if (sidebarItems.length > 0) {
       const newSelectedKey = getCurrentSelectedKey();
+
       // 如果计算出的key与当前selectedKey不同，则更新
       if (newSelectedKey !== selectedKey) {
+        // eslint-disable-next-line no-console
         console.log(
           "初始化时重新计算selectedKey:",
           newSelectedKey,
@@ -141,21 +137,22 @@ export const AppSidebarLayout: React.FC<AppSidebarLayoutProps> = ({ children }) 
   // 处理侧边栏项目选择
   const handleSidebarSelect = (key: string) => {
     const selectedItem = sidebarItems.find((item) => item.key === key);
+
     if (selectedItem?.href) {
       router.push(selectedItem.href);
     }
   };
 
   // 处理工作区切换 - 暂时锁定在模型测试工作区
-  const handleWorkspaceChange = (mode: WorkspaceMode) => {
-    // 暂时只允许模型测试工作区
-    if (mode !== WorkspaceMode.ModelTesting) {
-      return;
-    }
-
-    setCurrentMode(mode);
-    router.push("/model-testing/test");
-  };
+  // Note: handleWorkspaceChange 暂时未使用，保留以备后续功能扩展
+  // const handleWorkspaceChange = (mode: WorkspaceMode) => {
+  //   // 暂时只允许模型测试工作区
+  //   if (mode !== WorkspaceMode.ModelTesting) {
+  //     return;
+  //   }
+  //   setCurrentMode(mode);
+  //   router.push("/model-testing/test");
+  // };
 
   return (
     <div className="flex h-full">
@@ -163,10 +160,12 @@ export const AppSidebarLayout: React.FC<AppSidebarLayoutProps> = ({ children }) 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 px-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full overflow-hidden">
-              <img
-                src="/web-icon.png"
+              <Image
                 alt="nieta-model-lab"
                 className="w-full h-full object-cover"
+                height={32}
+                src="/web-icon.png"
+                width={32}
               />
             </div>
             <span className="text-small font-bold uppercase">nieta-model-lab</span>
@@ -178,14 +177,22 @@ export const AppSidebarLayout: React.FC<AppSidebarLayoutProps> = ({ children }) 
         <div className="flex flex-col gap-4">
           <div
             className={`flex items-center gap-3 px-2 py-2 rounded-medium transition-colors ${!isLoggedIn ? "cursor-pointer hover:bg-default-100" : ""}`}
+            role={!isLoggedIn ? "button" : undefined}
+            tabIndex={!isLoggedIn ? 0 : undefined}
             onClick={() => {
               if (!isLoggedIn) {
                 // 打开登录模态框
                 setIsLoginModalOpen(true);
               }
             }}
+            onKeyDown={(e) => {
+              if (!isLoggedIn && (e.key === "Enter" || e.key === " ")) {
+                e.preventDefault();
+                setIsLoginModalOpen(true);
+              }
+            }}
           >
-            <Avatar isBordered size="sm" showFallback name={getUserAvatarChar()} />
+            <Avatar isBordered showFallback name={getUserAvatarChar()} size="sm" />
             <div className="flex flex-col">
               <p className="text-small font-medium text-default-600">
                 {isLoggedIn ? userName : "未登录"}
@@ -211,19 +218,20 @@ export const AppSidebarLayout: React.FC<AppSidebarLayoutProps> = ({ children }) 
 
         <ScrollShadow className="-mr-6 h-full max-h-full py-6 pr-6">
           <Sidebar
+            className="w-full" // 确保侧边栏占满容器宽度
             defaultSelectedKey={selectedKey}
-            selectedKeys={[selectedKey]}
-            isCompact={false} // 确保所有工作区的侧边栏都不是紧凑模式
             iconClassName="group-data-[selected=true]:text-primary-foreground"
+            isCompact={false} // 确保所有工作区的侧边栏都不是紧凑模式
             itemClasses={{
               base: "data-[selected=true]:bg-primary-400 dark:data-[selected=true]:bg-primary-300 data-[hover=true]:bg-default-300/20 dark:data-[hover=true]:bg-default-200/40",
               title: "group-data-[selected=true]:text-primary-foreground",
             }}
-            className="w-full" // 确保侧边栏占满容器宽度
             items={sidebarItems}
+            selectedKeys={[selectedKey]}
             onSelect={(key) => {
               // 确保key是字符串类型
               const selectedKey = typeof key === "string" ? key : String(key);
+
               setSelectedKey(selectedKey);
               handleSidebarSelect(selectedKey);
             }}

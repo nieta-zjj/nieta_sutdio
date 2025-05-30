@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Input } from "@heroui/react";
+
 import { BaseParamComponent } from "./BaseParam";
 import { TextParamProps, ParamValueType } from "./types";
 
@@ -25,23 +26,23 @@ export const LuminaModelNameParam: React.FC<Partial<TextParamProps>> = (props) =
   ) => {
     return (
       <Input
+        className="w-full"
         placeholder={placeholder}
         value={currentValue?.toString() || ""}
         onChange={(e) => onValueChange(e.target.value)}
-        className="w-full"
       />
     );
   };
 
   return (
     <BaseParamComponent
+      defaultValue=""
+      isVariable={isVariable}
       label="模型"
+      renderInput={renderInput}
       value={value}
       onChange={onChange}
       onVariableChange={onVariableChange}
-      isVariable={isVariable}
-      renderInput={renderInput}
-      defaultValue=""
       {...rest}
     />
   );

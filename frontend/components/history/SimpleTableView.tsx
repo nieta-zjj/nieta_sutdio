@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import { Icon } from "@iconify/react";
-import { Button, Image, Slider } from "@heroui/react";
 import type { TableCellData } from "@/types/task";
+
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { Icon } from "@iconify/react";
+import { Button, Slider, Image } from "@heroui/react";
 
 // 图片URL处理函数
 const getResizedImageUrl = (url: string, size: number): string => {
   if (!url) return url;
   if (url.includes("x-oss-process=")) return url;
   const separator = url.includes("?") ? "&" : "?";
+
   return `${url}${separator}x-oss-process=image/resize,l_${size}/quality,q_80/format,webp`;
 };
 
@@ -74,12 +76,20 @@ const LazyImage: React.FC<{
     <div
       ref={imgRef}
       className={`relative cursor-pointer ${className || ""}`}
+      role="button"
       style={style}
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
     >
       {!isLoaded && !hasError && (
         <div className="absolute inset-0 flex items-center justify-center bg-default-50">
-          <Icon icon="solar:refresh-linear" className="animate-spin text-default-400" width={24} />
+          <Icon className="animate-spin text-default-400" icon="solar:refresh-linear" width={24} />
         </div>
       )}
 
@@ -87,8 +97,8 @@ const LazyImage: React.FC<{
         <div className="absolute inset-0 flex items-center justify-center bg-default-50 text-xs text-default-500">
           <div className="text-center">
             <Icon
-              icon="solar:danger-triangle-linear"
               className="w-5 h-5 mx-auto mb-1 text-danger"
+              icon="solar:danger-triangle-linear"
             />
             <span>图片加载失败</span>
           </div>
@@ -96,7 +106,7 @@ const LazyImage: React.FC<{
       )}
 
       {isInView && !hasError && (
-        <img
+        <Image
           alt={alt}
           className={isLoaded ? "opacity-100 max-w-full max-h-full" : "opacity-0"}
           src={src}
@@ -147,7 +157,7 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
   const currentScale = isFullscreen ? internalScale : tableScale;
 
   // 全屏切换
-  const toggleFullscreen = () => {
+  const toggleFullscreen = useCallback(() => {
     if (!isFullscreen) {
       // 进入全屏
       setInternalScale(tableScale); // 继承当前缩放
@@ -159,35 +169,38 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
         onScaleChange(internalScale); // 将全屏时的缩放值同步回父组件
       }
     }
-  };
+  }, [isFullscreen, tableScale, internalScale, onScaleChange]);
 
   // 缩放处理
-  const handleScaleChange = (newScale: number) => {
-    const clampedScale = Math.max(50, Math.min(200, newScale));
+  const handleScaleChange = useCallback(
+    (value: number | number[]) => {
+      const newScale = Array.isArray(value) ? value[0] : value;
 
-    if (isFullscreen) {
-      setInternalScale(clampedScale);
-    } else if (onScaleChange) {
-      onScaleChange(clampedScale);
-    }
-  };
+      const clampedScale = Math.max(50, Math.min(200, newScale));
+
+      if (isFullscreen) {
+        setInternalScale(clampedScale);
+      } else if (onScaleChange) {
+        onScaleChange(clampedScale);
+      }
+    },
+    [isFullscreen, onScaleChange]
+  );
 
   // 键盘事件处理
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isFullscreen) {
-        if (e.key === "Escape") {
-          toggleFullscreen();
-        } else if (e.key === "=" || e.key === "+") {
-          e.preventDefault();
-          handleScaleChange(currentScale + 10);
-        } else if (e.key === "-") {
-          e.preventDefault();
-          handleScaleChange(currentScale - 10);
-        } else if (e.key === "0") {
-          e.preventDefault();
-          handleScaleChange(100);
-        }
+      if (e.key === "Escape" && isFullscreen) {
+        setIsFullscreen(false);
+      } else if (e.key === "=" || e.key === "+") {
+        e.preventDefault();
+        handleScaleChange(currentScale + 10);
+      } else if (e.key === "-") {
+        e.preventDefault();
+        handleScaleChange(currentScale - 10);
+      } else if (e.key === "0") {
+        e.preventDefault();
+        handleScaleChange(100);
       }
     };
 
@@ -198,7 +211,7 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isFullscreen, currentScale]);
+  }, [isFullscreen, currentScale, handleScaleChange, toggleFullscreen]);
 
   // 获取网格列数
   const getGridColumns = (imageCount: number): string => {
@@ -206,6 +219,7 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
     if (imageCount <= 4) return "grid-cols-2";
     if (imageCount <= 9) return "grid-cols-3";
     if (imageCount <= 16) return "grid-cols-4";
+
     return "grid-cols-5";
   };
 
@@ -215,6 +229,7 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
     if (imageCount <= 4) return 360;
     if (imageCount <= 9) return 240;
     if (imageCount <= 16) return 180;
+
     return 120;
   };
 
@@ -224,17 +239,24 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
   };
 
   // 排序函数
-  const sortData = (data: any[], column: string, direction: SortDirection): any[] => {
+  const sortData = useCallback((data: any[], column: string, direction: SortDirection): any[] => {
     if (!column || !direction) return data;
 
     return [...data].sort((a, b) => {
-      let valueA: string = column === "rowTitle" ? a[column] : "";
-      let valueB: string = column === "rowTitle" ? b[column] : "";
+      let valueA: string = column === "rowTitle" ? String(a.rowTitle || "") : "";
+      let valueB: string = column === "rowTitle" ? String(b.rowTitle || "") : "";
 
       // 如果不是rowTitle列，则需要从单元格数据中提取值
       if (column !== "rowTitle") {
-        valueA = a[column]?.xValue || a[column]?.yValue || "";
-        valueB = b[column]?.xValue || b[column]?.yValue || "";
+        const cellA = Object.prototype.hasOwnProperty.call(a, column)
+          ? (Reflect.get(a, column) as TableCellData | undefined)
+          : undefined;
+        const cellB = Object.prototype.hasOwnProperty.call(b, column)
+          ? (Reflect.get(b, column) as TableCellData | undefined)
+          : undefined;
+
+        valueA = cellA?.xValue || cellA?.yValue || "";
+        valueB = cellB?.xValue || cellB?.yValue || "";
       }
 
       // 检查是否为数字
@@ -244,14 +266,16 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
       // 如果两者都是数字，按数字大小排序
       if (isANumeric && isBNumeric) {
         return direction === "asc"
-          ? Number(valueA) - Number(valueB)
-          : Number(valueB) - Number(valueA);
+          ? parseFloat(valueA) - parseFloat(valueB)
+          : parseFloat(valueB) - parseFloat(valueA);
       }
 
-      // 否则按字母顺序排序
-      return direction === "asc" ? valueA.localeCompare(valueB) : valueB.localeCompare(valueA);
+      // 否则按字符串排序
+      const compareResult = valueA.localeCompare(valueB);
+
+      return direction === "asc" ? compareResult : -compareResult;
     });
-  };
+  }, []);
 
   // 切换排序
   const toggleSort = (column: string) => {
@@ -259,6 +283,7 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
       if (prevState.column === column) {
         const newDirection =
           prevState.direction === "asc" ? "desc" : prevState.direction === "desc" ? null : "asc";
+
         return { column: newDirection ? column : null, direction: newDirection };
       } else {
         return { column, direction: "asc" };
@@ -269,21 +294,23 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
   // 应用排序的表格数据
   const sortedTableData = useMemo(() => {
     return sortData(tableData, sortState.column || "", sortState.direction);
-  }, [tableData, sortState]);
+  }, [tableData, sortState, sortData]);
 
   // 限制显示的行数，避免表格过长
-  const maxDisplayRows = 20;
-  const displayTableData = sortedTableData.slice(0, maxDisplayRows);
-  const hasMoreRows = sortedTableData.length > maxDisplayRows;
+  // const maxDisplayRows = 20;
+  // Note: displayTableData 和 hasMoreRows 暂时未使用，保留以备后续功能扩展
+  // const displayTableData = sortedTableData.slice(0, maxDisplayRows);
+  // const hasMoreRows = sortedTableData.length > maxDisplayRows;
 
   // 复制到剪贴板功能
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
       // 可以添加一个简单的提示，这里先省略
-    } catch (err) {
+    } catch {
       // 降级方案
       const textArea = document.createElement("textarea");
+
       textArea.value = text;
       document.body.appendChild(textArea);
       textArea.select();
@@ -295,11 +322,11 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
   // 渲染复制图标
   const renderCopyIcon = (text: string) => {
     return (
-      <div title="复制" className="inline-block">
+      <div className="inline-block" title="复制">
         <Icon
+          className="opacity-50 hover:opacity-100 cursor-pointer transition-opacity"
           icon="solar:copy-linear"
           width={14}
-          className="opacity-50 hover:opacity-100 cursor-pointer transition-opacity"
           onClick={(e) => {
             e.stopPropagation();
             copyToClipboard(text);
@@ -312,6 +339,7 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
   // 处理表头文本显示的统一函数
   const formatHeaderText = (text: string) => {
     const displayText = text || "";
+
     return {
       displayText:
         displayText.length > headerCharLimit
@@ -324,14 +352,16 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
 
   // 渲染单元格
   const renderCell = (row: any, colKey: string) => {
-    const cellData = row[colKey] as TableCellData;
+    const cellData = Object.prototype.hasOwnProperty.call(row, colKey)
+      ? (Reflect.get(row, colKey) as TableCellData)
+      : undefined;
 
     if (!cellData || typeof cellData === "string") {
       return null;
     }
 
     const { url, urls, hasValidImage, errorMessage } = cellData;
-    const cellTitle = `${row.rowTitle}-${colKey}`;
+    const cellTitle = `${String(row.rowTitle)}-${colKey}`;
 
     // 如果有错误信息，显示错误状态
     if (errorMessage) {
@@ -364,7 +394,15 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
                 <div
                   key={index}
                   className="relative overflow-hidden cursor-pointer bg-default-50"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onViewImage(imgUrl, `${cellTitle} - 批次 ${index + 1}`, cellData)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onViewImage(imgUrl, `${cellTitle} - 批次 ${index + 1}`, cellData);
+                    }
+                  }}
                 >
                   <div className="w-full h-full flex items-center justify-center">
                     <LazyImage
@@ -380,10 +418,22 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
             // 单图显示
             <div
               className="w-full h-full bg-default-50 overflow-hidden cursor-pointer"
+              role="button"
+              tabIndex={0}
               onClick={() => {
                 urls && urls.length > 0
                   ? onViewMultipleImages(urls, cellTitle, cellData)
                   : onViewImage(url, cellTitle, cellData);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  if (urls && urls.length > 0) {
+                    onViewMultipleImages(urls, cellTitle, cellData);
+                  } else {
+                    onViewImage(url, cellTitle, cellData);
+                  }
+                }
               }}
             >
               <div className="w-full h-full flex items-center justify-center">
@@ -405,8 +455,8 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
             <div className="text-center p-4">
               <div className="flex flex-col items-center">
                 <Icon
-                  icon="solar:missing-circular-linear"
                   className="w-8 h-8 text-default-300 mb-2"
+                  icon="solar:missing-circular-linear"
                 />
                 <p className="text-default-500 text-sm font-medium">未找到图片</p>
                 <div className="mt-2 text-default-400 text-xs space-y-1">
@@ -414,6 +464,7 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
                     <p title={`${xAxis}:${cellData?.xValue || colKey.replace(/#\d+$/, "")}`}>
                       {(() => {
                         const text = `${xAxis}:${cellData?.xValue || colKey.replace(/#\d+$/, "")}`;
+
                         return text.length > 8 ? `${text.substring(0, 8)}...` : text;
                       })()}
                     </p>
@@ -422,6 +473,7 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
                     <p title={`${yAxis}:${cellData?.yValue || row.rowTitle.replace(/#\d+$/, "")}`}>
                       {(() => {
                         const text = `${yAxis}:${cellData?.yValue || row.rowTitle.replace(/#\d+$/, "")}`;
+
                         return text.length > 8 ? `${text.substring(0, 8)}...` : text;
                       })()}
                     </p>
@@ -436,21 +488,6 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
     }
   };
 
-  // 渲染排序图标
-  const renderSortIcon = (column: string) => {
-    if (sortState.column !== column) {
-      return <Icon icon="solar:sort-bold" width={14} className="opacity-50" />;
-    }
-
-    if (sortState.direction === "asc") {
-      return <Icon icon="solar:sort-by-up-bold" width={14} />;
-    } else if (sortState.direction === "desc") {
-      return <Icon icon="solar:sort-by-down-bold" width={14} />;
-    }
-
-    return <Icon icon="solar:sort-bold" width={14} className="opacity-50" />;
-  };
-
   // 计算表格统计信息
   const tableStats = useMemo(() => {
     let totalCells = 0;
@@ -461,7 +498,9 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
     tableData.forEach((row) => {
       columnValues.forEach((colKey) => {
         totalCells++;
-        const cellData = row[colKey] as TableCellData;
+        const cellData = Object.prototype.hasOwnProperty.call(row, colKey)
+          ? (Reflect.get(row, colKey) as TableCellData)
+          : undefined;
 
         if (cellData && typeof cellData === "object") {
           if (cellData.errorMessage) {
@@ -484,6 +523,7 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
       cellsEmpty,
       rows: tableData.length,
       columns: columnValues.length,
+      successRate: totalCells > 0 ? ((cellsWithImages / totalCells) * 100).toFixed(1) : "0",
     };
   }, [tableData, columnValues]);
 
@@ -492,39 +532,36 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
     <div className="flex items-center gap-2 w-full max-w-xs">
       <Button
         isIconOnly
+        className="flex-shrink-0 min-w-6 w-6 h-6 text-base font-bold"
+        isDisabled={currentScale <= 50}
         size="sm"
+        title="缩小"
         variant="light"
         onPress={() => handleScaleChange(currentScale - 10)}
-        isDisabled={currentScale <= 50}
-        title="缩小"
-        className="flex-shrink-0 min-w-6 w-6 h-6 text-base font-bold"
       >
         -
       </Button>
       <div className="flex-1 min-w-0 px-2">
         <Slider
+          aria-label="缩放比例"
+          className="w-full"
+          maxValue={200}
+          minValue={50}
+          showTooltip={false}
           size="md"
           step={10}
-          minValue={50}
-          maxValue={200}
           value={currentScale}
-          onChange={(value) => {
-            const newScale = Array.isArray(value) ? value[0] : value;
-            handleScaleChange(newScale);
-          }}
-          className="w-full"
-          aria-label="缩放比例"
-          showTooltip={false}
+          onChange={handleScaleChange}
         />
       </div>
       <Button
         isIconOnly
+        className="flex-shrink-0 min-w-6 w-6 h-6 text-base font-bold"
+        isDisabled={currentScale >= 200}
         size="sm"
+        title="放大"
         variant="light"
         onPress={() => handleScaleChange(currentScale + 10)}
-        isDisabled={currentScale >= 200}
-        title="放大"
-        className="flex-shrink-0 min-w-6 w-6 h-6 text-base font-bold"
       >
         +
       </Button>
@@ -534,11 +571,11 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
         </span>
       </div>
       <Button
+        className="flex-shrink-0 text-xs px-2"
         size="sm"
+        title="重置缩放"
         variant="light"
         onPress={() => handleScaleChange(100)}
-        title="重置缩放"
-        className="flex-shrink-0 text-xs px-2"
       >
         重置
       </Button>
@@ -570,17 +607,18 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-xs text-default-600 whitespace-nowrap">表头字符数:</span>
             <input
-              type="number"
-              min="5"
+              className="w-16 px-2 py-1 text-xs border border-default-300 rounded focus:outline-none focus:border-primary-500"
               max="50"
+              min="5"
+              type="number"
               value={headerCharLimit}
               onChange={(e) => {
                 const value = parseInt(e.target.value);
+
                 if (!isNaN(value) && value >= 5 && value <= 50) {
                   setHeaderCharLimit(value);
                 }
               }}
-              className="w-16 px-2 py-1 text-xs border border-default-300 rounded focus:outline-none focus:border-primary-500"
             />
           </div>
           <div className="text-xs text-default-500 hidden lg:block">
@@ -588,11 +626,11 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
           </div>
           <Button
             isIconOnly
+            className="flex-shrink-0"
             size="sm"
+            title="退出全屏 (ESC)"
             variant="light"
             onPress={toggleFullscreen}
-            title="退出全屏 (ESC)"
-            className="flex-shrink-0"
           >
             <Icon icon="solar:quit-fullscreen-square-linear" width={16} />
           </Button>
@@ -605,7 +643,7 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
     return (
       <div className="flex items-center justify-center p-8 text-default-500">
         <div className="text-center">
-          <Icon icon="solar:table-linear" className="w-16 h-16 mx-auto mb-4" />
+          <Icon className="w-16 h-16 mx-auto mb-4" icon="solar:table-linear" />
           <p>暂无表格数据</p>
         </div>
       </div>
@@ -657,6 +695,7 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
                             ? `${yAxis}`
                             : "";
                     const formatted = formatHeaderText(headerText);
+
                     return (
                       <>
                         <span title={formatted.needsTooltip ? formatted.fullText : undefined}>
@@ -685,6 +724,7 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
                   <div className="flex items-center justify-center">
                     {(() => {
                       const formatted = formatHeaderText(colKey);
+
                       return (
                         <>
                           <span title={formatted.needsTooltip ? formatted.fullText : undefined}>
@@ -708,11 +748,12 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
                   <div className="flex items-center justify-center px-2">
                     {(() => {
                       const formatted = formatHeaderText(row.rowTitle as string);
+
                       return (
                         <>
                           <span
-                            title={formatted.needsTooltip ? formatted.fullText : undefined}
                             className="flex-1 text-center"
+                            title={formatted.needsTooltip ? formatted.fullText : undefined}
                           >
                             {formatted.displayText}
                           </span>
@@ -759,20 +800,21 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-xs text-default-600 whitespace-nowrap">表头字符数:</span>
             <input
-              type="number"
-              min="5"
+              className="w-16 px-2 py-1 text-xs border border-default-300 rounded focus:outline-none focus:border-primary-500"
               max="200"
+              min="5"
+              type="number"
               value={headerCharLimit}
               onChange={(e) => {
                 const value = parseInt(e.target.value);
+
                 if (!isNaN(value) && value >= 5 && value <= 50) {
                   setHeaderCharLimit(value);
                 }
               }}
-              className="w-16 px-2 py-1 text-xs border border-default-300 rounded focus:outline-none focus:border-primary-500"
             />
           </div>
-          <Button isIconOnly size="sm" variant="light" onPress={toggleFullscreen} title="全屏显示">
+          <Button isIconOnly size="sm" title="全屏显示" variant="light" onPress={toggleFullscreen}>
             <Icon icon="solar:full-screen-square-linear" width={16} />
           </Button>
         </div>
@@ -784,22 +826,22 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
       <div className="p-3 bg-default-50 border-t border-default-200 flex justify-between items-center flex-shrink-0">
         <div className="flex items-center gap-4">
           <span className="text-xs text-default-600">
-            <Icon icon="solar:table-linear" className="inline w-3 h-3 mr-1" />
+            <Icon className="inline w-3 h-3 mr-1" icon="solar:table-linear" />
             {`${tableStats.rows} 行 × ${tableStats.columns} 列`}
           </span>
           <span className="text-xs text-success-600">
-            <Icon icon="solar:gallery-minimalistic-linear" className="inline w-3 h-3 mr-1" />
+            <Icon className="inline w-3 h-3 mr-1" icon="solar:gallery-minimalistic-linear" />
             {`${tableStats.cellsWithImages} 有图片`}
           </span>
           {tableStats.cellsWithErrors > 0 && (
             <span className="text-xs text-danger-600">
-              <Icon icon="solar:danger-triangle-linear" className="inline w-3 h-3 mr-1" />
+              <Icon className="inline w-3 h-3 mr-1" icon="solar:danger-triangle-linear" />
               {`${tableStats.cellsWithErrors} 错误`}
             </span>
           )}
           {tableStats.cellsEmpty > 0 && (
             <span className="text-xs text-default-500">
-              <Icon icon="solar:file-remove-linear" className="inline w-3 h-3 mr-1" />
+              <Icon className="inline w-3 h-3 mr-1" icon="solar:file-remove-linear" />
               {`${tableStats.cellsEmpty} 空白`}
             </span>
           )}
@@ -808,10 +850,10 @@ export const SimpleTableView: React.FC<SimpleTableViewProps> = ({
           <span className="text-xs text-default-500">{`共 ${tableStats.totalCells} 个单元格`}</span>
           {sortState.column && (
             <span className="text-xs text-primary-600">
-              <Icon icon="solar:sort-linear" className="inline w-3 h-3 mr-1" />
-              {`按 ${sortState.column === "rowTitle" ? "行标题" : sortState.column} ${
-                sortState.direction === "asc" ? "升序" : "降序"
-              }`}
+              <Icon className="inline w-3 h-3 mr-1" icon="solar:sort-linear" />
+              {`按 ${
+                sortState.column === "rowTitle" ? "行标题" : sortState.column
+              } ${sortState.direction === "asc" ? "升序" : "降序"}`}
             </span>
           )}
         </div>

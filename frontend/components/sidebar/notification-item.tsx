@@ -75,7 +75,7 @@ const NotificationItem = React.forwardRef<HTMLDivElement, NotificationItemProps>
             <strong className="font-medium">{name}</strong> {description || children}
           </p>
           <time className="text-tiny text-default-400">{time}</time>
-          {type && contentByType[type]}
+          {type && type in contentByType && contentByType[type as keyof typeof contentByType]}
         </div>
       </div>
     );

@@ -2,6 +2,7 @@
 
 import { Chip } from "@heroui/react";
 import { Icon } from "@iconify/react";
+
 import { TaskStatus } from "@/types/task";
 
 interface TaskStatusChipProps {
@@ -58,8 +59,8 @@ export const TaskStatusChip: React.FC<TaskStatusChipProps> = ({ status, size = "
     <Chip
       color={config.color}
       size={size}
+      startContent={<Icon className="w-4 h-4" icon={config.icon} />}
       variant="flat"
-      startContent={<Icon icon={config.icon} className="w-4 h-4" />}
     >
       {config.text}
     </Chip>

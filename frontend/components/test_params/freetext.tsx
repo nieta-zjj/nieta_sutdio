@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Input } from "@heroui/react";
+
 import { BaseParamComponent } from "./BaseParam";
 import { TextParamProps } from "./types";
 
@@ -15,22 +16,22 @@ export const FreetextParam: React.FC<TextParamProps> = (props) => {
   const renderInput = (currentValue: any, onValueChange: (value: any) => void) => {
     return (
       <Input
-        size="sm"
+        className="w-full"
         placeholder={placeholder}
+        size="sm"
         value={currentValue?.toString() || ""}
         onChange={(e) => onValueChange(e.target.value)}
-        className="w-full"
       />
     );
   };
 
   return (
     <BaseParamComponent
+      defaultValue=""
       label="文本"
+      renderInput={renderInput}
       value={value}
       onChange={onChange}
-      renderInput={renderInput}
-      defaultValue=""
       {...rest}
     />
   );

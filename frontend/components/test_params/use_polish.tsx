@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Switch } from "@heroui/react";
+
 import { BaseParamComponent } from "./BaseParam";
 import { BooleanParamProps, ParamValueType } from "./types";
 
@@ -11,8 +12,8 @@ import { BooleanParamProps, ParamValueType } from "./types";
 export const UsePolishParam: React.FC<Partial<BooleanParamProps>> = (props) => {
   const {
     value = false,
-    onChange = () => { },
-    onVariableChange = () => { },
+    onChange = () => {},
+    onVariableChange = () => {},
     isVariable = false,
     ...rest
   } = props;
@@ -27,8 +28,8 @@ export const UsePolishParam: React.FC<Partial<BooleanParamProps>> = (props) => {
 
     return (
       <Switch
-        isSelected={boolValue}
         className="min-h-[40px]"
+        isSelected={boolValue}
         onValueChange={(checked) => onValueChange(checked)}
       />
     );
@@ -36,8 +37,8 @@ export const UsePolishParam: React.FC<Partial<BooleanParamProps>> = (props) => {
 
   return (
     <BaseParamComponent
-      isVariable={isVariable}
       defaultValue={false}
+      isVariable={isVariable}
       label="润色"
       renderInput={renderInput}
       value={value}

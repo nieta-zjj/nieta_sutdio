@@ -46,6 +46,36 @@ def initialize_data(task_id: str, task_data: Dict[str, Any]):
     if not user:
         raise ValueError(f"用户不存在: {user_id}")
 
+    # 生成任务ID或使用传入的ID
+    final_task_id = uuid.UUID(task_id) if task_id else uuid.uuid4()
+
+    # 检查任务是否已存在
+    existing_task = Task.get_or_none(Task.id == final_task_id)
+    if existing_task:
+        logger.info(f"任务 {final_task_id} 已存在，状态: {existing_task.status}")
+
+        # 如果任务已经在处理、完成或失败状态，直接返回现有任务
+        if existing_task.status in [TaskStatus.PROCESSING.value, TaskStatus.COMPLETED.value, TaskStatus.FAILED.value]:
+            logger.info(f"任务 {final_task_id} 已处于终止状态 {existing_task.status}，返回现有任务")
+            return existing_task
+
+        # 如果任务是PENDING状态，可能是重复提交，也返回现有任务
+        if existing_task.status == TaskStatus.PENDING.value:
+            logger.info(f"任务 {final_task_id} 处于PENDING状态，可能是重复提交，返回现有任务")
+            return existing_task
+
+        # 如果任务是CANCELLED状态，可以重新创建
+        if existing_task.status == TaskStatus.CANCELLED.value:
+            logger.info(f"任务 {final_task_id} 已被取消，将删除并重新创建")
+            # 删除现有任务及其子任务
+            from backend.db.database import test_db_proxy
+            with test_db_proxy.atomic():
+                # 删除子任务
+                Subtask.delete().where(Subtask.task == final_task_id).execute()
+                # 删除主任务
+                existing_task.delete_instance()
+            logger.info(f"已删除被取消的任务 {final_task_id} 及其子任务")
+
     dimensions = []
 
     # 为变量ID分配唯一的数字ID
@@ -158,9 +188,6 @@ def initialize_data(task_id: str, task_data: Dict[str, Any]):
     for dimension_value in dimensions:
         total_images = dimension_value * total_images
 
-    # 生成任务ID或使用传入的ID
-    final_task_id = uuid.UUID(task_id) if task_id else uuid.uuid4()
-
     # 记录variable_id映射信息
     if variable_id_mapping:
         logger.debug(f"Variable ID 映射表: {variable_id_mapping}")
@@ -181,8 +208,19 @@ def initialize_data(task_id: str, task_data: Dict[str, Any]):
 
     # 开始数据库事务并创建任务
     from backend.db.database import test_db_proxy
-    with test_db_proxy.atomic():
-        task_obj = Task.create(**task_obj_data)
+    try:
+        with test_db_proxy.atomic():
+            task_obj = Task.create(**task_obj_data)
+    except Exception as e:
+        # 如果仍然遇到重复键错误，可能是并发创建，再次检查现有任务
+        if "duplicate key" in str(e) or "already exists" in str(e):
+            logger.warning(f"创建任务时遇到重复键错误，重新检查现有任务: {final_task_id}")
+            existing_task = Task.get_or_none(Task.id == final_task_id)
+            if existing_task:
+                logger.info(f"找到现有任务 {final_task_id}，状态: {existing_task.status}")
+                return existing_task
+        # 如果不是重复键错误，重新抛出异常
+        raise
 
     # 准备飞书通知详情
     # details = {
@@ -280,12 +318,18 @@ def send_subtasks_to_dramatiq(subtasks: List[Subtask]):
             # 累加延迟时间（转换为毫秒）
             accumulated_delay_ms += int(delay_seconds * 1000)
 
-            background_service.enqueue(
-                actor_name="test_run_lumina_subtask",
-                kwargs={"subtask_id": str(subtask.id)},
-                queue_name=settings.SUBTASK_OPS_QUEUE,
-                delay=accumulated_delay_ms
-            )
+            max_retries = 60
+            for i in range(max_retries):
+                try:
+                    background_service.enqueue(
+                        actor_name="test_run_lumina_subtask",
+                        kwargs={"subtask_id": str(subtask.id)},
+                        queue_name=settings.SUBTASK_OPS_QUEUE,
+                        delay=accumulated_delay_ms
+                    )
+                    break
+                except Exception as e:
+                    logger.error(f"[{subtask.id}] 发送Lumina子任务失败: {str(e)}")
 
     # 处理普通任务
     if normal_subtasks:
@@ -1013,7 +1057,7 @@ def create_subtasks_from_task(task_obj: Task) -> List[Subtask]:
 
 @dramatiq.actor(
     queue_name="test_master",  # 使用标准队列
-    max_retries=settings.MAX_RETRIES,
+    max_retries=60, #settings.MAX_RETRIES,
     time_limit=3600000*24,  # 3600秒 (1小时) * 24 = 24小时，考虑到可能需要等待执行槽位更长时间
 )
 def test_submit_master(task_id: str, task_data: Dict[str, Any]):
@@ -1055,8 +1099,18 @@ def test_submit_master(task_id: str, task_data: Dict[str, Any]):
         # 初始化任务数据（此时任务状态为pending）
         task_obj = initialize_data(task_id, task_data)
 
-        # 插入主任务到数据库
-        insert_master_task_to_db(task_obj)
+        # 检查是否返回的是现有任务
+        if task_obj.status != TaskStatus.PENDING.value:
+            logger.info(f"[{task_id}] 返回现有任务 {task_obj.id}，状态: {task_obj.status}")
+            return {
+                "status": "existing",
+                "task_id": str(task_obj.id),
+                "task_status": task_obj.status,
+                "message": f"任务已存在，当前状态: {task_obj.status}"
+            }
+
+        # 任务已在initialize_data中创建并保存，无需再次插入
+        logger.info(f"[{task_id}] 新任务已创建: {task_obj.id}")
 
         # # 发送飞书通知 - 任务已提交
         # try:
@@ -1141,6 +1195,7 @@ def test_submit_master(task_id: str, task_data: Dict[str, Any]):
 
         # 将子任务发送到Dramatiq队列
         send_subtasks_to_dramatiq(subtasks_to_create)
+
 
         # 记录任务提交完成
         logger.info(f"[{task_id}] 测试任务提交完成，已创建并发送 {len(subtasks_to_create)} 个子任务")
